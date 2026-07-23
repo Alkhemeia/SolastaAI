@@ -15,6 +15,7 @@ namespace SolastaAIPersistence
         public float EmergencyHpThresholdPercent = 30f;
         public bool EnableHotkeyToggle = true;
         public KeyCode ToggleHotkey = KeyCode.N;
+        public bool EnableAutoWeaponSwap = true;
         public bool AutoControlGuests = false;
 
         public override void Save(UnityModManager.ModEntry modEntry)
@@ -94,8 +95,20 @@ namespace SolastaAIPersistence
             }
 
             GUILayout.Space(5);
-            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(ModSettings.EnableHotkeyToggle, " <b>Hotkey 'N' im Kampf aktivieren</b> (Schaltet den aktiven Helden zwischen KI und Spieler um)");
-            ModSettings.AutoControlGuests = GUILayout.Toggle(ModSettings.AutoControlGuests, " <b>Automatische KI für Gast-Charaktere</b>");
+            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                ModSettings.EnableAutoWeaponSwap,
+                " <b>Automatischer Waffenwechsel</b> (Wechselt auf Fernkampf, wenn kein Nahkampfziel erreichbar ist)"
+            );
+
+            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
+                ModSettings.EnableHotkeyToggle, 
+                " <b>Hotkey 'N' im Kampf aktivieren</b> (Schaltet den aktiven Helden zwischen KI und Spieler um)"
+            );
+            
+            ModSettings.AutoControlGuests = GUILayout.Toggle(
+                ModSettings.AutoControlGuests, 
+                " <b>Automatische KI für Gast-Charaktere</b>"
+            );
             
             GUILayout.Space(15);
             GUILayout.Label("<b>Aktive Helden-Steuerung (Party AI Controls):</b>");
@@ -242,6 +255,87 @@ namespace SolastaAIPersistence
             }
         }
 
+        public static void CheckAndAutoSwapWeapons(GameLocationCharacter character)
+        {
+            try
+            {
+                if (!ModSettings.EnableAutoWeaponSwap || character == null || character.RulesetCharacter == null) return;
+
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null || hero.CharacterInventory == null) return;
+
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService == null || !battleService.IsBattleInProgress) return;
+
+                var battle = battleService.Battle;
+                if (battle == null) return;
+
+                // Find closest alive enemy contender
+                int minDistance = int.MaxValue;
+                var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
+                if (enemies == null || enemies.Count == 0) return;
+
+                var posA = character.LocationPosition;
+                foreach (var enemy in enemies)
+                {
+                    if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
+                        continue;
+
+                    var posB = enemy.LocationPosition;
+                    int dx = Math.Abs(posA.x - posB.x);
+                    int dz = Math.Abs(posA.z - posB.z);
+                    int dy = Math.Abs(posA.y - posB.y);
+                    int dist = Math.Max(dx, Math.Max(dy, dz));
+
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                    }
+                }
+
+                if (minDistance == int.MaxValue) return;
+
+                var inventory = hero.CharacterInventory;
+                int currentConfig = inventory.CurrentConfiguration;
+                int otherConfig = (currentConfig == 0) ? 1 : 0;
+
+                bool currentlyRanged = hero.IsWieldingRangedWeapon();
+
+                // If no enemy in melee reach (> 2 cells) and currently holding Melee weapon:
+                if (minDistance > 2 && !currentlyRanged)
+                {
+                    inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                    if (hero.IsWieldingRangedWeapon())
+                    {
+                        ModEntry?.Logger.Log($"[SolastaAI] Auto-Weapon Swap: {character.Name} switched to Ranged Weapon Set (Config {otherConfig}) - Target distance: {minDistance} cells.");
+                    }
+                    else
+                    {
+                        // Secondary set is not ranged, revert back
+                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    }
+                }
+                // If enemy IS in melee reach (<= 2 cells) and currently holding Ranged weapon:
+                else if (minDistance <= 2 && currentlyRanged)
+                {
+                    inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                    if (!hero.IsWieldingRangedWeapon())
+                    {
+                        ModEntry?.Logger.Log($"[SolastaAI] Auto-Weapon Swap: {character.Name} switched to Melee Weapon Set (Config {otherConfig}) - Target in melee reach ({minDistance} cells).");
+                    }
+                    else
+                    {
+                        // Secondary set was also ranged, revert back
+                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndAutoSwapWeapons: {ex}");
+            }
+        }
+
         public static void LoadSavedChoices()
         {
             try
@@ -323,6 +417,12 @@ namespace SolastaAIPersistence
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice))
                 {
                     Main.ApplyAIController(__instance, choice);
+
+                    // If AI is active, check and auto-swap weapon if needed
+                    if (choice > 0)
+                    {
+                        Main.CheckAndAutoSwapWeapons(__instance);
+                    }
                 }
             }
             catch (Exception ex)
