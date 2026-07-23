@@ -35,8 +35,13 @@ namespace SolastaAI
         public bool EnableSpellThornWhip = true;
         public bool EnableSpellPoisonSpray = true;
         public bool EnableSpellChillTouch = true;
+        public bool EnableSpellResistElements = true;
+        public bool EnableSpellAnimalFriendship = true;
+        public bool EnableSpellCharmPerson = true;
         public bool EnableSpellCureWounds = true;
         public bool EnableSpellHealingWord = true;
+        public bool EnableSpellDetectMagic = true;
+        public bool EnableSpellDetectPoisonAndDisease = true;
         public bool EnableSpellEntangle = true;
         public bool EnableSpellFaerieFire = true;
         public bool EnableSpellFogCloud = true;
@@ -45,17 +50,23 @@ namespace SolastaAI
         public bool EnableSpellLongstrider = true;
         public bool EnableSpellProtectionFromPoison = true;
         public bool EnableSpellBarkskin = true;
+        public bool EnableSpellDarkvision = true;
+        public bool EnableSpellFlameBlade = true;
         public bool EnableSpellFlamingSphere = true;
+        public bool EnableSpellHeatMetal = true;
         public bool EnableSpellHoldPerson = true;
         public bool EnableSpellLesserRestoration = true;
         public bool EnableSpellMoonbeam = true;
         public bool EnableSpellSpikeGrowth = true;
         public bool EnableSpellPassWithoutTrace = true;
+        public bool EnableSpellProtectionFromEnergy = true;
         public bool EnableSpellCallLightning = true;
         public bool EnableSpellDispelMagic = true;
         public bool EnableSpellSleetStorm = true;
         public bool EnableSpellWindWall = true;
         public bool EnableSpellDaylight = true;
+        public bool EnableSpellCreateFoodAndWater = true;
+        public bool EnableSpellRevivify = true;
 
         public bool AutoControlGuests = false;
 
@@ -81,7 +92,7 @@ namespace SolastaAI
         public const int MODE_RANGE_BACKUP  = 2;
         public const int MODE_CASTER        = 3;
         public const int MODE_CLERIC        = 4;
-        public const int MODE_DRUID_WILD    = 5;
+        public const int MODE_DRUID         = 5;
         public const int MODE_FIGHTER_MELEE = 6;
         public const int MODE_FIGHTER_RANGED = 7;
         public const int MODE_MAGE          = 8;
@@ -94,7 +105,7 @@ namespace SolastaAI
             "AI: Range (Backup Melee)",
             "AI: Caster (Backup Attacks)",
             "AI: Cleric Combat",
-            "AI: Druid (Wild Shape)",
+            "AI: Druid",
             "AI: Fighter (Melee)",
             "AI: Fighter (Ranged)",
             "AI: Mage Combat",
@@ -157,10 +168,20 @@ namespace SolastaAI
                 if (!ModSettings.EnableSpellPoisonSpray) return false;
             if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellChillTouch) return false;
+            if (spellName.IndexOf("ResistElements", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellResistElements) return false;
+            if (spellName.IndexOf("AnimalFriendship", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellAnimalFriendship) return false;
+            if (spellName.IndexOf("CharmPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellCharmPerson) return false;
             if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellCureWounds) return false;
             if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellHealingWord) return false;
+            if (spellName.IndexOf("DetectMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellDetectMagic) return false;
+            if (spellName.IndexOf("DetectPoisonAndDisease", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellDetectPoisonAndDisease) return false;
             if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellEntangle) return false;
             if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -177,8 +198,14 @@ namespace SolastaAI
                 if (!ModSettings.EnableSpellProtectionFromPoison) return false;
             if (spellName.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellBarkskin) return false;
+            if (spellName.IndexOf("Darkvision", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellDarkvision) return false;
+            if (spellName.IndexOf("FlameBlade", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellFlameBlade) return false;
             if (spellName.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellFlamingSphere) return false;
+            if (spellName.IndexOf("HeatMetal", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellHeatMetal) return false;
             if (spellName.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellHoldPerson) return false;
             if (spellName.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -189,6 +216,8 @@ namespace SolastaAI
                 if (!ModSettings.EnableSpellSpikeGrowth) return false;
             if (spellName.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellPassWithoutTrace) return false;
+            if (spellName.IndexOf("ProtectionFromEnergy", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellProtectionFromEnergy) return false;
             if (spellName.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellCallLightning) return false;
             if (spellName.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -199,6 +228,10 @@ namespace SolastaAI
                 if (!ModSettings.EnableSpellWindWall) return false;
             if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellDaylight) return false;
+            if (spellName.IndexOf("CreateFoodAndWater", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellCreateFoodAndWater) return false;
+            if (spellName.IndexOf("Revivify", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellRevivify) return false;
 
             // User-controlled spell toggles
             if (spellName.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -354,43 +387,65 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    if (currentChoice == MODE_DRUID_WILD)
+                    if (currentChoice == MODE_DRUID)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Druid Spell Controls for {displayName}:</i>");
+                        GUILayout.Label($"<i>✨ Druid Spell & Ability Controls for {displayName}:</i>");
 
                         ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, "   └─ <b>Wild Shape / Tiergestalt</b>");
 
                         GUILayout.Space(3);
+                        GUILayout.Label("  <b>🔮 Cantrips / Zaubertricks:</b>");
+                        ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "     └─ <b>Shillelagh / Zauberstock</b>");
+                        ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "     └─ <b>Guidance / Göttliche Führung</b>");
+                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame / Flamme erzeugen</b>");
+                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip / Dornenpeitsche</b>");
+                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray / Giftsprühen</b>");
+                        ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "     └─ <b>Chill Touch / Kalte Hand</b>");
+                        ModSettings.EnableSpellResistElements = GUILayout.Toggle(ModSettings.EnableSpellResistElements, "     └─ <b>Resist Elements</b>");
+
+                        GUILayout.Space(3);
                         GUILayout.Label("  <b>💚 Healing & Restoration:</b>");
-                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds</b>");
-                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word</b>");
-                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration</b>");
-                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry</b>");
+                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds / Wunden heilen</b>");
+                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word / Wort der Heilung</b>");
+                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration / Teilw. Genesung</b>");
+                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry / Gute Beere</b>");
+                        ModSettings.EnableSpellCreateFoodAndWater = GUILayout.Toggle(ModSettings.EnableSpellCreateFoodAndWater, "     └─ <b>Create Food & Water / Nahrung erschaffen</b>");
+                        ModSettings.EnableSpellRevivify = GUILayout.Toggle(ModSettings.EnableSpellRevivify, "     └─ <b>Revivify / Wiederbeleben</b>");
 
                         GUILayout.Space(3);
                         GUILayout.Label("  <b>🛡️ Protection & Buffs:</b>");
-                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison</b>");
-                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin</b>");
-                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider</b>");
-                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace</b>");
+                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison / Schutz vor Gift</b>");
+                        ModSettings.EnableSpellProtectionFromEnergy = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromEnergy, "     └─ <b>Protection from Energy / Schutz vor Energie</b>");
+                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin / Rindenhaut</b>");
+                        ModSettings.EnableSpellDarkvision = GUILayout.Toggle(ModSettings.EnableSpellDarkvision, "     └─ <b>Darkvision / Dunkelsicht</b>");
+                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider / Langschritt</b>");
+                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace / Spurlos verbergen</b>");
+                        ModSettings.EnableSpellJump = GUILayout.Toggle(ModSettings.EnableSpellJump, "     └─ <b>Jump / Springen</b>");
 
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Attack & Crowd Control:</b>");
-                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame</b>");
-                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip</b>");
-                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray</b>");
-                        ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "     └─ <b>Chill Touch / Kalte Hand</b>");
-                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle</b>");
-                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire</b>");
-                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere</b>");
-                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person</b>");
-                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam</b>");
-                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth</b>");
-                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning</b>");
+                        GUILayout.Label("  <b>⚔️ Attack & Control Spells:</b>");
+                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle / Verstricken</b>");
+                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire / Feenfeuer</b>");
+                        ModSettings.EnableSpellFogCloud = GUILayout.Toggle(ModSettings.EnableSpellFogCloud, "     └─ <b>Fog Cloud / Nebelwolke</b>");
+                        ModSettings.EnableSpellAnimalFriendship = GUILayout.Toggle(ModSettings.EnableSpellAnimalFriendship, "     └─ <b>Animal Friendship / Tierfreundschaft</b>");
+                        ModSettings.EnableSpellCharmPerson = GUILayout.Toggle(ModSettings.EnableSpellCharmPerson, "     └─ <b>Charm Person / Person bezaubern</b>");
+                        ModSettings.EnableSpellDetectMagic = GUILayout.Toggle(ModSettings.EnableSpellDetectMagic, "     └─ <b>Detect Magic / Magie entdecken</b>");
+                        ModSettings.EnableSpellDetectPoisonAndDisease = GUILayout.Toggle(ModSettings.EnableSpellDetectPoisonAndDisease, "     └─ <b>Detect Poison / Gift entdecken</b>");
+                        ModSettings.EnableSpellFlameBlade = GUILayout.Toggle(ModSettings.EnableSpellFlameBlade, "     └─ <b>Flame Blade / Flammenklinge</b>");
+                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere / Flammenkugel</b>");
+                        ModSettings.EnableSpellHeatMetal = GUILayout.Toggle(ModSettings.EnableSpellHeatMetal, "     └─ <b>Heat Metal / Metall erhitzen</b>");
+                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person / Person festhalten</b>");
+                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam / Mondstrahl</b>");
+                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth / Dornenwuchs</b>");
+                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning / Blitzschlag rufen</b>");
+                        ModSettings.EnableSpellDispelMagic = GUILayout.Toggle(ModSettings.EnableSpellDispelMagic, "     └─ <b>Dispel Magic / Magie bannen</b>");
+                        ModSettings.EnableSpellSleetStorm = GUILayout.Toggle(ModSettings.EnableSpellSleetStorm, "     └─ <b>SleetStorm / Graupelschauer</b>");
+                        ModSettings.EnableSpellWindWall = GUILayout.Toggle(ModSettings.EnableSpellWindWall, "     └─ <b>Wind Wall / Windwand</b>");
+                        ModSettings.EnableSpellDaylight = GUILayout.Toggle(ModSettings.EnableSpellDaylight, "     └─ <b>Daylight / Tageslicht</b>");
 
                         GUILayout.Space(3);
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap / Cantrip Positioning</b>");
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
                     }
                     else if (currentChoice == MODE_FIGHTER_MELEE || currentChoice == MODE_FIGHTER_RANGED)
@@ -527,7 +582,7 @@ namespace SolastaAI
                             case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
-                            case MODE_DRUID_WILD:     pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case MODE_DRUID:          pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_FIGHTER_MELEE:  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                             // Ranged Fighter: CasterCombatDecisions keeps maximum distance from enemies.
                             case MODE_FIGHTER_RANGED: pkg = db.GetElement("CasterCombatDecisions", true); break;
@@ -955,7 +1010,7 @@ namespace SolastaAI
                     Main.ApplyAIController(__instance, choice);
                     switch (choice)
                     {
-                        case Main.MODE_DRUID_WILD:       Main.ExecuteDruidTactics(__instance); break;
+                        case Main.MODE_DRUID:            Main.ExecuteDruidTactics(__instance); break;
                         case Main.MODE_FIGHTER_MELEE:    Main.ExecuteFighterTactics(__instance, false); break;
                         case Main.MODE_FIGHTER_RANGED:   Main.ExecuteFighterTactics(__instance, true); break;
                         default:
