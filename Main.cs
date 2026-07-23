@@ -105,7 +105,7 @@ namespace SolastaAI
             "AI: Melee (Default)",
             "AI: Range (Default)",
             "AI: Caster (Default)",
-            "AI: Cleric Combat",
+            "AI: Cleric",
             "AI: Druid",
             "AI: Fighter",
             "AI: Mage",

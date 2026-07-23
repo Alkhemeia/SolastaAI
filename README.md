@@ -15,7 +15,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Melee (Default)`
      - `AI: Range (Default)`
      - `AI: Caster (Default)`
-     - `AI: Cleric Combat`
+     - `AI: Cleric`
      - `AI: Druid` - Full spellcasting support and Tiergestalt (Wild Shape).
      - `AI: Fighter` - Melee & Ranged fighter combat with sub-style selector.
      - `AI: Mage`
