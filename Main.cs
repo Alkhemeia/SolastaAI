@@ -9,37 +9,15 @@ using UnityModManagerNet;
 
 namespace SolastaAI
 {
-    /// <summary>
-    /// Configuration settings for SolastaAI character AI management and tactical automation.
-    /// </summary>
     public class Settings : UnityModManager.ModSettings
     {
-        /// <summary>
-        /// When true, automatically reverts hero control back to Human (Player) if HP drops below the threshold.
-        /// </summary>
         public bool EnableEmergencyLowHpFallback = true;
-
-        /// <summary>
-        /// Percentage threshold of Max HP below which Emergency Fallback triggers (default: 30%).
-        /// </summary>
         public float EmergencyHpThresholdPercent = 30f;
-
-        /// <summary>
-        /// Enables the 'N' hotkey during combat to toggle active hero control mode.
-        /// </summary>
         public bool EnableHotkeyToggle = true;
-
-        /// <summary>
-        /// KeyCode used to toggle active character control during combat.
-        /// </summary>
         public KeyCode ToggleHotkey = KeyCode.N;
-
-        /// <summary>
-        /// Automatically swaps weapon sets to ranged if no enemy is reachable in melee range.
-        /// </summary>
         public bool EnableAutoWeaponSwap = true;
 
-        // --- GRANULAR FIGHTER SKILL & MANEUVER TOGGLES ---
+        // Fighter Toggles
         public bool EnableFighterSecondWind = true;
         public bool EnableFighterActionSurge = true;
         public bool EnableFighterIndomitable = true;
@@ -49,17 +27,13 @@ namespace SolastaAI
         public bool EnableFighterPrecisionAttack = true;
         public bool EnableAvoidOpportunityAttacks = true;
 
-        // --- GRANULAR DRUID SKILL & SPELL TOGGLES ---
+        // Druid Toggles
         public bool EnableDruidWildShape = true;
-
-        // Cantrips
         public bool EnableSpellShillelagh = true;
         public bool EnableSpellGuidance = true;
         public bool EnableSpellProduceFlame = true;
         public bool EnableSpellThornWhip = true;
         public bool EnableSpellPoisonSpray = true;
-
-        // 1st Level Spells
         public bool EnableSpellCureWounds = true;
         public bool EnableSpellHealingWord = true;
         public bool EnableSpellEntangle = true;
@@ -68,8 +42,6 @@ namespace SolastaAI
         public bool EnableSpellGoodberry = true;
         public bool EnableSpellJump = true;
         public bool EnableSpellLongstrider = true;
-
-        // 2nd Level Spells
         public bool EnableSpellProtectionFromPoison = true;
         public bool EnableSpellBarkskin = true;
         public bool EnableSpellFlamingSphere = true;
@@ -78,58 +50,43 @@ namespace SolastaAI
         public bool EnableSpellMoonbeam = true;
         public bool EnableSpellSpikeGrowth = true;
         public bool EnableSpellPassWithoutTrace = true;
-
-        // 3rd Level & Higher Spells
         public bool EnableSpellCallLightning = true;
         public bool EnableSpellDispelMagic = true;
         public bool EnableSpellSleetStorm = true;
         public bool EnableSpellWindWall = true;
         public bool EnableSpellDaylight = true;
 
-        /// <summary>
-        /// Automatically applies AI control for guest/companion characters.
-        /// </summary>
         public bool AutoControlGuests = false;
 
-        public override void Save(UnityModManager.ModEntry modEntry)
-        {
-            Save(this, modEntry);
-        }
+        public override void Save(UnityModManager.ModEntry modEntry) { Save(this, modEntry); }
     }
 
-    /// <summary>
-    /// Core entry point and static manager for SolastaAI.
-    /// </summary>
     public static class Main
     {
         public static UnityModManager.ModEntry ModEntry { get; private set; }
         public static Settings ModSettings { get; private set; }
         public static string SaveFilePath { get; private set; }
-        
-        /// <summary>
-        /// Dictionary mapping Character Name to selected AI Choice Index:
-        /// 0 = Human (Player)
-        /// 1 = AI: Melee (Default)
-        /// 2 = AI: Range (Backup Melee)
-        /// 3 = AI: Caster (Backup Attacks)
-        /// 4 = AI: Cleric Combat
-        /// 5 = AI: Druid (Wild Shape & Support)
-        /// 6 = AI: Druid (Shillelagh Melee)
-        /// 7 = AI: Fighter (Melee)
-        /// 8 = AI: Fighter (Ranged / Archer)
-        /// 9 = AI: Mage Combat
-        /// 10 = AI: Rogue Combat
-        /// </summary>
-        public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// Track dropdown menu open states per character in the UMM UI.
-        /// </summary>
+        // Tracks the name of the character whose turn is currently being evaluated by the AI engine.
+        // Updated in StartBattleTurn so mode-specific blocking is context-aware.
+        public static string CurrentTurnCharacterName = "";
+
+        public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, bool> DropdownOpenStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// Human-readable names for available AI Decision Packages in the UMM UI.
-        /// </summary>
+        // Mode constants
+        public const int MODE_HUMAN         = 0;
+        public const int MODE_MELEE         = 1;
+        public const int MODE_RANGE_BACKUP  = 2;
+        public const int MODE_CASTER        = 3;
+        public const int MODE_CLERIC        = 4;
+        public const int MODE_DRUID_WILD    = 5;
+        public const int MODE_DRUID_SHILLELAGH = 6;
+        public const int MODE_FIGHTER_MELEE = 7;
+        public const int MODE_FIGHTER_RANGED = 8;
+        public const int MODE_MAGE          = 9;
+        public const int MODE_ROGUE         = 10;
+
         public static readonly string[] AIPackageNames = new string[]
         {
             "Human (Player)",
@@ -145,9 +102,6 @@ namespace SolastaAI
             "AI: Rogue Combat"
         };
 
-        /// <summary>
-        /// Unity Mod Manager Load method called during mod initialization at boot.
-        /// </summary>
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             try
@@ -155,17 +109,13 @@ namespace SolastaAI
                 ModEntry = modEntry;
                 ModSettings = UnityModManager.ModSettings.Load<Settings>(modEntry);
                 SaveFilePath = Path.Combine(modEntry.Path, "SavedAIControllers.json");
-
                 LoadSavedChoices();
-
                 modEntry.OnGUI = OnGUI;
                 modEntry.OnSaveGUI = OnSaveGUI;
                 modEntry.OnUpdate = OnUpdate;
-
                 var harmony = new Harmony(modEntry.Info.Id);
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
-
-                modEntry.Logger.Log("[SolastaAI] Standalone Mod loaded successfully!");
+                modEntry.Logger.Log("[SolastaAI] Mod loaded successfully!");
                 return true;
             }
             catch (Exception ex)
@@ -176,23 +126,133 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Renders the Unity Mod Manager Options UI panel for SolastaAI with dropdown selectors and dynamic mode-specific settings.
+        /// Gets the current AI mode for the character currently taking their turn.
+        /// Used by patches to make mode-specific decisions.
         /// </summary>
+        public static int GetCurrentTurnCharacterMode()
+        {
+            if (string.IsNullOrEmpty(CurrentTurnCharacterName)) return MODE_HUMAN;
+            if (CharacterAIChoices.TryGetValue(CurrentTurnCharacterName, out int mode)) return mode;
+            return MODE_HUMAN;
+        }
+
+        /// <summary>
+        /// Returns true if a spell should be allowed for the AI engine to use,
+        /// considering both the user toggle AND the current character's mode.
+        /// Shillelagh Druid: ranged cantrips are blocked from AI selection (forces melee advance).
+        /// </summary>
+        public static bool IsSpellEnabledForAI(string spellName)
+        {
+            if (string.IsNullOrEmpty(spellName)) return true;
+
+            int mode = GetCurrentTurnCharacterMode();
+
+            // For Shillelagh Druid: block ranged cantrips from AI engine so it MUST advance to melee.
+            // Our own script handles ranged cantrips explicitly while advancing.
+            if (mode == MODE_DRUID_SHILLELAGH)
+            {
+                if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                // Also block support/buff spells the AI might self-cast instead of advancing
+                if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            }
+
+            // User-controlled spell toggles
+            if (spellName.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellShillelagh;
+            if (spellName.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellGuidance;
+            if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellProduceFlame;
+            if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellThornWhip;
+            if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellPoisonSpray;
+            if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellCureWounds;
+            if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellHealingWord;
+            if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellEntangle;
+            if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellFaerieFire;
+            if (spellName.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellFogCloud;
+            if (spellName.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellGoodberry;
+            if (spellName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellJump;
+            if (spellName.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellLongstrider;
+            if (spellName.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellProtectionFromPoison;
+            if (spellName.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellBarkskin;
+            if (spellName.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellFlamingSphere;
+            if (spellName.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellHoldPerson;
+            if (spellName.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellLesserRestoration;
+            if (spellName.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellMoonbeam;
+            if (spellName.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellSpikeGrowth;
+            if (spellName.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellPassWithoutTrace;
+            if (spellName.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellCallLightning;
+            if (spellName.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellDispelMagic;
+            if (spellName.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellSleetStorm;
+            if (spellName.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellWindWall;
+            if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellDaylight;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns true if a power should be allowed for the AI engine to use.
+        /// </summary>
+        public static bool IsPowerEnabledForAI(string powerName)
+        {
+            if (string.IsNullOrEmpty(powerName)) return true;
+
+            if (powerName.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableDruidWildShape;
+            if (powerName.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterSecondWind;
+            if (powerName.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterActionSurge;
+            if (powerName.IndexOf("Indomitable", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Unbeugsam", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterIndomitable;
+            if (powerName.IndexOf("PushingAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterPushingAttack;
+            if (powerName.IndexOf("TripAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterTripAttack;
+            if (powerName.IndexOf("Riposte", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterRiposte;
+            if (powerName.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableFighterPrecisionAttack;
+
+            return true;
+        }
+
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             GUILayout.BeginVertical("box");
             GUILayout.Label("<b><size=14>SolastaAI - Advanced AI & Tactical Settings</size></b>", GUILayout.ExpandWidth(true));
             GUILayout.Space(5);
 
-            // --- SECTION 1: GLOBAL SAFETY & HOTKEY SETTINGS ---
             GUILayout.BeginVertical("box");
             GUILayout.Label("<b>🛡️ Global Safety & Hotkey Settings</b>");
-            
-            ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(
-                ModSettings.EnableEmergencyLowHpFallback, 
-                " <b>Enable Emergency Low HP Protection</b> (Reverts hero to Human control when HP drops below threshold)"
-            );
-
+            ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(ModSettings.EnableEmergencyLowHpFallback,
+                " <b>Enable Emergency Low HP Protection</b> (Reverts hero to Human control when HP drops below threshold)");
             if (ModSettings.EnableEmergencyLowHpFallback)
             {
                 GUILayout.BeginHorizontal();
@@ -201,21 +261,14 @@ namespace SolastaAI
                 ModSettings.EmergencyHpThresholdPercent = GUILayout.HorizontalSlider(ModSettings.EmergencyHpThresholdPercent, 5f, 50f, GUILayout.Width(200));
                 GUILayout.EndHorizontal();
             }
-
-            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
-                ModSettings.EnableHotkeyToggle, 
-                " <b>Enable In-Combat Quick Hotkey ('N')</b> (Toggles active hero AI/Human control on the fly)"
-            );
-            
-            ModSettings.AutoControlGuests = GUILayout.Toggle(
-                ModSettings.AutoControlGuests, 
-                " <b>Enable Auto AI for Guest & Companion Characters</b>"
-            );
+            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(ModSettings.EnableHotkeyToggle,
+                " <b>Enable In-Combat Quick Hotkey ('N')</b> (Toggles active hero AI/Human control on the fly)");
+            ModSettings.AutoControlGuests = GUILayout.Toggle(ModSettings.AutoControlGuests,
+                " <b>Enable Auto AI for Guest & Companion Characters</b>");
             GUILayout.EndVertical();
 
             GUILayout.Space(10);
 
-            // --- SECTION 2: PARTY CHARACTER ARCHETYPE DROPDOWNS & DYNAMIC SUB-SETTINGS ---
             GUILayout.BeginVertical("box");
             GUILayout.Label("<b>👥 Party Character AI Archetype Selection & Skill Settings</b>");
 
@@ -228,36 +281,26 @@ namespace SolastaAI
                     string name = character.Name;
                     if (string.IsNullOrEmpty(name)) continue;
 
-                    if (!CharacterAIChoices.TryGetValue(name, out int currentChoice))
-                    {
-                        currentChoice = 0; // Default Human
-                    }
+                    if (!CharacterAIChoices.TryGetValue(name, out int currentChoice)) currentChoice = 0;
 
                     string displayName = character.RulesetCharacter != null ? character.RulesetCharacter.Name : name;
                     string currentArchetypeName = (currentChoice >= 0 && currentChoice < AIPackageNames.Length) ? AIPackageNames[currentChoice] : AIPackageNames[0];
 
                     GUILayout.BeginVertical("box");
-
-                    // 1. Character Dropdown Header
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(180));
-
                     bool isOpen = DropdownOpenStates.TryGetValue(name, out bool open) && open;
                     if (GUILayout.Button($"<b>{currentArchetypeName}</b> ▼", GUILayout.Width(260)))
-                    {
                         DropdownOpenStates[name] = !isOpen;
-                    }
                     GUILayout.EndHorizontal();
 
-                    // 2. Dropdown Options List (renders when expanded)
                     if (isOpen)
                     {
                         GUILayout.BeginVertical("box");
                         for (int i = 0; i < AIPackageNames.Length; i++)
                         {
                             bool isSelected = (i == currentChoice);
-                            string prefix = isSelected ? "● " : "  ";
-                            if (GUILayout.Button($"{prefix}{AIPackageNames[i]}", GUILayout.ExpandWidth(true)))
+                            if (GUILayout.Button($"{(isSelected ? "● " : "  ")}{AIPackageNames[i]}", GUILayout.ExpandWidth(true)))
                             {
                                 CharacterAIChoices[name] = i;
                                 ApplyAIController(character, i);
@@ -268,133 +311,79 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    // 3. DYNAMIC INDIVIDUAL SPELL & SKILL TOGGLES (Structured by Categories!)
-                    if (currentChoice == 5 || currentChoice == 6) // Druid (Wild Shape) or Druid (Shillelagh)
+                    if (currentChoice == MODE_DRUID_WILD || currentChoice == MODE_DRUID_SHILLELAGH)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Individual Spell & Skill Controls for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>✨ Druid Spell Controls for {displayName}:</i>");
 
-                        if (currentChoice == 5)
-                        {
-                            ModSettings.EnableDruidWildShape = GUILayout.Toggle(
-                                ModSettings.EnableDruidWildShape,
-                                "   └─ <b>Wild Shape / Tiergestalt</b> (Transform when threatened or HP < 75%)"
-                            );
-                        }
+                        if (currentChoice == MODE_DRUID_WILD)
+                            ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, "   └─ <b>Wild Shape / Tiergestalt</b>");
 
-                        // Category 1: Healing & Support Spells
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>💚 Healing & Restoration Spells:</b>");
-                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds / Wunden heilen</b>");
-                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word / Heilendes Wort</b>");
-                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration / Geringe Genesung</b>");
-                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry / Gute Beere</b>");
+                        GUILayout.Label("  <b>💚 Healing & Restoration:</b>");
+                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds</b>");
+                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word</b>");
+                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration</b>");
+                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry</b>");
 
-                        // Category 2: Protection & Buff Spells
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>🛡️ Protection & Buff Spells:</b>");
-                        if (currentChoice == 6)
+                        GUILayout.Label("  <b>🛡️ Protection & Buffs:</b>");
+                        if (currentChoice == MODE_DRUID_SHILLELAGH)
                         {
                             ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "     └─ <b>Shillelagh / Zauberstock</b>");
                             ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "     └─ <b>Guidance / Göttliche Führung</b>");
                         }
-                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison / Schutz vor Gift</b>");
-                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin / Rindenhaut</b>");
-                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider / Langer Schritt</b>");
-                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace / Spurlos gleiten</b>");
+                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison</b>");
+                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin</b>");
+                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider</b>");
+                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace</b>");
 
-                        // Category 3: Attack & Crowd Control Spells
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Attack & Crowd Control Spells:</b>");
-                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame / Flamme erzeugen</b>");
-                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip / Dornenpeitsche</b>");
-                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray / Giftwolke</b>");
-                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle / Verstricken</b>");
-                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire / Feenfeuer</b>");
-                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere / Flammenkugel</b>");
-                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person / Person festhalten</b>");
-                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam / Mondstrahl</b>");
-                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth / Dornenwuchs</b>");
-                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning / Blitze rufen</b>");
+                        GUILayout.Label("  <b>⚔️ Attack & Crowd Control:</b>");
+                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame</b>");
+                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip</b>");
+                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray</b>");
+                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle</b>");
+                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire</b>");
+                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere</b>");
+                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person</b>");
+                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam</b>");
+                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth</b>");
+                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning</b>");
 
-                        // Category 4: Movement & Positioning
                         GUILayout.Space(3);
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                            ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Auto-Weapon Swap / Cantrip Positioning</b> (Advance or switch weapons based on distance)"
-                        );
-
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap / Cantrip Positioning</b>");
                         GUILayout.EndVertical();
                     }
-                    else if (currentChoice == 7 || currentChoice == 8) // Fighter (Melee) or Fighter (Ranged)
+                    else if (currentChoice == MODE_FIGHTER_MELEE || currentChoice == MODE_FIGHTER_RANGED)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Individual Skill & Maneuver Controls for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>✨ Fighter Skill Controls for {displayName}:</i>");
 
-                        // Category 1: Defense & Recovery Skills
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>🛡️ Defense & Recovery Skills:</b>");
-                        ModSettings.EnableFighterSecondWind = GUILayout.Toggle(
-                            ModSettings.EnableFighterSecondWind,
-                            "     └─ <b>Second Wind / Durchschnaufen</b> (Self-heal when HP < 60%)"
-                        );
-                        ModSettings.EnableFighterIndomitable = GUILayout.Toggle(
-                            ModSettings.EnableFighterIndomitable,
-                            "     └─ <b>Indomitable / Unbeugsam</b> (Reroll failed saving throws)"
-                        );
+                        GUILayout.Label("  <b>🛡️ Defense & Recovery:</b>");
+                        ModSettings.EnableFighterSecondWind = GUILayout.Toggle(ModSettings.EnableFighterSecondWind, "     └─ <b>Second Wind / Durchschnaufen</b>");
+                        ModSettings.EnableFighterIndomitable = GUILayout.Toggle(ModSettings.EnableFighterIndomitable, "     └─ <b>Indomitable / Unbeugsam</b>");
 
-                        // Category 2: Offensive Skills & Maneuvers
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Offensive Skills & Combat Maneuvers:</b>");
-                        ModSettings.EnableFighterActionSurge = GUILayout.Toggle(
-                            ModSettings.EnableFighterActionSurge,
-                            "     └─ <b>Action Surge / Tatendrank</b> (Grant extra actions during combat)"
-                        );
-                        ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(
-                            ModSettings.EnableFighterPushingAttack,
-                            "     └─ <b>Pushing Attack / Stoßangriff</b> (Push target backwards)"
-                        );
-                        ModSettings.EnableFighterTripAttack = GUILayout.Toggle(
-                            ModSettings.EnableFighterTripAttack,
-                            "     └─ <b>Trip Attack / Beinstellen</b> (Knock target prone)"
-                        );
-                        ModSettings.EnableFighterRiposte = GUILayout.Toggle(
-                            ModSettings.EnableFighterRiposte,
-                            "     └─ <b>Riposte / Riposte</b> (Counter-attack on missed enemy hit)"
-                        );
-                        ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(
-                            ModSettings.EnableFighterPrecisionAttack,
-                            "     └─ <b>Precision Attack / Präzisionsangriff</b> (Add bonus to attack rolls)"
-                        );
+                        GUILayout.Label("  <b>⚔️ Offensive Skills & Maneuvers:</b>");
+                        ModSettings.EnableFighterActionSurge = GUILayout.Toggle(ModSettings.EnableFighterActionSurge, "     └─ <b>Action Surge / Tatendrank</b>");
+                        ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(ModSettings.EnableFighterPushingAttack, "     └─ <b>Pushing Attack / Stoßangriff</b>");
+                        ModSettings.EnableFighterTripAttack = GUILayout.Toggle(ModSettings.EnableFighterTripAttack, "     └─ <b>Trip Attack / Beinstellen</b>");
+                        ModSettings.EnableFighterRiposte = GUILayout.Toggle(ModSettings.EnableFighterRiposte, "     └─ <b>Riposte</b>");
+                        ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(ModSettings.EnableFighterPrecisionAttack, "     └─ <b>Precision Attack / Präzisionsangriff</b>");
 
-                        // Category 3: Tactical Movement & Positioning
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>🎯 Movement & Tactical Positioning:</b>");
-                        if (currentChoice == 8) // Fighter (Ranged)
-                        {
-                            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
-                                ModSettings.EnableAvoidOpportunityAttacks,
-                                "     └─ <b>Avoid Opportunity Attacks</b> (Fight adjacent threats in melee first before retreating)"
-                            );
-                        }
-
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                            ModSettings.EnableAutoWeaponSwap,
-                            "     └─ <b>Auto-Weapon Swap</b> (Switch between Melee and Ranged weapon sets based on distance)"
-                        );
-
+                        GUILayout.Label("  <b>🎯 Movement & Positioning:</b>");
+                        if (currentChoice == MODE_FIGHTER_RANGED)
+                            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "     └─ <b>Avoid Opportunity Attacks</b>");
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "     └─ <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
                     }
                     else if (currentChoice > 0)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
-
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                            ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Auto-Weapon Swap</b> (Automatically equip ranged weapons when out of reach)"
-                        );
-
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
                     }
 
@@ -403,10 +392,9 @@ namespace SolastaAI
             }
             else
             {
-                GUILayout.Label("<i>(No active party loaded. Start or load a campaign session to configure active heroes.)</i>");
+                GUILayout.Label("<i>(No active party loaded. Start or load a campaign to configure heroes.)</i>");
             }
             GUILayout.EndVertical();
-
             GUILayout.EndVertical();
         }
 
@@ -416,42 +404,19 @@ namespace SolastaAI
             SaveChoices();
         }
 
-        /// <summary>
-        /// Frame update listener. Handles the 'N' hotkey during combat and guarantees 100% Player Control during exploration outside combat.
-        /// </summary>
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
         {
-            // Outside of active combat, ensure all party members are under Player Control (movable & selectable)
             EnsureExplorationControl();
-
             if (!ModSettings.EnableHotkeyToggle) return;
-
-            if (Input.GetKeyDown(ModSettings.ToggleHotkey))
-            {
-                ToggleActiveCharacterAI();
-            }
+            if (Input.GetKeyDown(ModSettings.ToggleHotkey)) ToggleActiveCharacterAI();
         }
 
-        /// <summary>
-        /// Helper to retrieve the active Human Player Controller ID dynamically.
-        /// </summary>
         public static int GetPlayerControllerId()
         {
-            try
-            {
-                var activeController = Gui.ActivePlayerController;
-                if (activeController != null)
-                {
-                    return activeController.ControllerId;
-                }
-            }
-            catch {}
+            try { var c = Gui.ActivePlayerController; if (c != null) return c.ControllerId; } catch {}
             return PlayerControllerManager.MainPlayerControllerId;
         }
 
-        /// <summary>
-        /// Restores party characters that were left in DM/AI mode back to the active Player Controller whenever outside of combat exploration.
-        /// </summary>
         public static void EnsureExplorationControl()
         {
             try
@@ -460,120 +425,83 @@ namespace SolastaAI
                 if (battleService == null || !battleService.IsBattleInProgress)
                 {
                     var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                    if (charService != null && charService.PartyCharacters != null)
+                    if (charService?.PartyCharacters == null) return;
+                    int humanId = GetPlayerControllerId();
+                    bool dirtied = false;
+                    foreach (var character in charService.PartyCharacters)
                     {
-                        int humanId = GetPlayerControllerId();
-                        bool dirtied = false;
-
-                        foreach (var character in charService.PartyCharacters)
+                        if (character != null && character.ControllerId == PlayerControllerManager.DmControllerId)
                         {
-                            // ONLY reset characters that are currently set to DM/AI Controller ID (4242)
-                            if (character != null && character.ControllerId == PlayerControllerManager.DmControllerId)
-                            {
-                                character.ControllerId = humanId;
-                                dirtied = true;
-                            }
-                        }
-
-                        if (dirtied)
-                        {
-                            var activePlayerController = Gui.ActivePlayerController;
-                            if (activePlayerController != null)
-                            {
-                                activePlayerController.DirtyControlledCharacters();
-                            }
+                            character.ControllerId = humanId;
+                            dirtied = true;
                         }
                     }
+                    if (dirtied) Gui.ActivePlayerController?.DirtyControlledCharacters();
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in EnsureExplorationControl: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] EnsureExplorationControl: {ex}"); }
         }
 
-        /// <summary>
-        /// Toggles AI vs Human control for the active contender in combat when hotkey 'N' is pressed.
-        /// </summary>
         public static void ToggleActiveCharacterAI()
         {
             try
             {
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
-                if (battleService != null && battleService.IsBattleInProgress)
-                {
-                    var activeBattle = battleService.Battle;
-                    var activeContender = activeBattle?.ActiveContender;
-                    if (activeContender != null)
-                    {
-                        string name = activeContender.Name;
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            if (!CharacterAIChoices.TryGetValue(name, out int currentChoice))
-                            {
-                                currentChoice = 0;
-                            }
-
-                            int newChoice = (currentChoice == 0) ? 1 : 0;
-                            CharacterAIChoices[name] = newChoice;
-                            ApplyAIController(activeContender, newChoice);
-                            SaveChoices();
-
-                            string modeStr = newChoice > 0 ? "AI CONTROL" : "HUMAN CONTROL";
-                            ModEntry.Logger.Log($"[SolastaAI] Hotkey 'N' pressed: {name} set to {modeStr}");
-                        }
-                    }
-                }
+                if (battleService?.IsBattleInProgress != true) return;
+                var contender = battleService.Battle?.ActiveContender;
+                if (contender == null) return;
+                string name = contender.Name;
+                if (string.IsNullOrEmpty(name)) return;
+                if (!CharacterAIChoices.TryGetValue(name, out int currentChoice)) currentChoice = 0;
+                int newChoice = (currentChoice == 0) ? 1 : 0;
+                CharacterAIChoices[name] = newChoice;
+                ApplyAIController(contender, newChoice);
+                SaveChoices();
+                ModEntry.Logger.Log($"[SolastaAI] Hotkey: {name} -> {AIPackageNames[newChoice]}");
             }
-            catch (Exception ex)
-            {
-                ModEntry.Logger.Error($"[SolastaAI] Error handling Hotkey toggle: {ex}");
-            }
+            catch (Exception ex) { ModEntry.Logger.Error($"[SolastaAI] ToggleActiveCharacterAI: {ex}"); }
         }
 
-        /// <summary>
-        /// Applies the requested Controller ID and Decision Package to the specified character.
-        /// Controller ID 4242 (DM/AI) is ONLY applied when actively in combat.
-        /// </summary>
         public static void ApplyAIController(GameLocationCharacter character, int choice)
         {
             if (character == null) return;
             try
             {
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
-                bool isInBattle = battleService != null && battleService.IsBattleInProgress;
+                bool isInBattle = battleService?.IsBattleInProgress == true;
                 int humanId = GetPlayerControllerId();
 
-                // Outside of battle, ALWAYS force Player Control so heroes can move and be selected in exploration!
                 if (!isInBattle || choice <= 0)
                 {
                     character.ControllerId = humanId;
                 }
                 else
                 {
-                    // AI / DM Computer Control (Controller ID = 4242) only during combat
                     character.ControllerId = PlayerControllerManager.DmControllerId;
 
-                    var decisionPackageDb = DatabaseRepository.GetDatabase<TA.AI.DecisionPackageDefinition>();
-                    if (decisionPackageDb != null)
+                    var db = DatabaseRepository.GetDatabase<TA.AI.DecisionPackageDefinition>();
+                    if (db != null)
                     {
-                        TA.AI.DecisionPackageDefinition package = null;
+                        TA.AI.DecisionPackageDefinition pkg = null;
                         switch (choice)
                         {
-                            case 1: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
-                            case 2: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Range (Backup Melee): maintains distance!
-                            case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
-                            case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
-                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: advances towards melee!)
-                            case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
-                            case 8: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Fighter (Ranged / Archer: Support Caster Package keeps distance!)
-                            case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
-                            case 10: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
-                            default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
+                            case MODE_MELEE:          pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
+                            case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
+                            case MODE_DRUID_WILD:     pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            // Shillelagh Druid: Melee package so AI pathfinding advances to melee range.
+                            // Ranged cantrips are blocked by IsSpellEnabledForAI so AI is FORCED to advance.
+                            case MODE_DRUID_SHILLELAGH: pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
+                            case MODE_FIGHTER_MELEE:  pkg = db.GetElement("FighterCombatDecisions", true); break;
+                            // Ranged Fighter: CasterCombatDecisions keeps maximum distance from enemies.
+                            case MODE_FIGHTER_RANGED: pkg = db.GetElement("CasterCombatDecisions", true); break;
+                            case MODE_MAGE:           pkg = db.GetElement("CasterCombatDecisions", true); break;
+                            case MODE_ROGUE:          pkg = db.GetElement("RogueCombatDecisions", true); break;
+                            default:                  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
-                        if (package != null)
+                        if (pkg != null)
                         {
                             if (character.BehaviourPackage == null)
                             {
@@ -581,766 +509,329 @@ namespace SolastaAI
                                 newPkg.BattleStartBehavior = GameLocationBehaviourPackage.BattleStartBehaviorType.RaisesAlarm;
                                 character.BehaviourPackage = newPkg;
                             }
-                            character.BehaviourPackage.DecisionPackageDefinition = package;
+                            character.BehaviourPackage.DecisionPackageDefinition = pkg;
                         }
                     }
                 }
 
-                var activePlayerController = Gui.ActivePlayerController;
-                if (activePlayerController != null)
-                {
-                    activePlayerController.DirtyControlledCharacters();
-                }
+                Gui.ActivePlayerController?.DirtyControlledCharacters();
             }
-            catch (Exception ex)
-            {
-                ModEntry.Logger.Error($"[SolastaAI] Error applying AI controller to {character?.Name}: {ex}");
-            }
+            catch (Exception ex) { ModEntry.Logger.Error($"[SolastaAI] ApplyAIController {character?.Name}: {ex}"); }
         }
 
-        /// <summary>
-        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank, Maneuvers) based on individual toggles.
-        /// </summary>
         public static void ExecuteFighterTactics(GameLocationCharacter character, bool isRangedArchetype)
         {
             try
             {
-                if (character == null || character.RulesetCharacter == null) return;
-                
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null || hero.UsablePowers == null) return;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.UsablePowers == null) return;
 
-                // 1. Second Wind / Durchschnaufen (PowerFighterSecondWind) trigger when HP < 60% (if toggle enabled)
                 if (ModSettings.EnableFighterSecondWind)
                 {
                     int currentHp = hero.CurrentHitPoints;
                     int maxHp = currentHp + hero.MissingHitPoints;
                     if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
                     {
-                        var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                        var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
                             (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                             p.PowerDefinition.Name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 ||
                              p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                        if (secondWindPower != null && hero.GetRemainingUsesOfPower(secondWindPower) > 0)
+                        if (power != null && hero.GetRemainingUsesOfPower(power) > 0)
                         {
-                            hero.UsePower(secondWindPower);
-                            ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind / Durchschnaufen! (HP: {currentHp}/{maxHp})");
+                            hero.UsePower(power);
+                            ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Second Wind!");
                         }
                     }
                 }
 
-                // 2. Action Surge / Tatendrank (PowerFighterActionSurge) trigger in combat (if toggle enabled)
                 if (ModSettings.EnableFighterActionSurge)
                 {
-                    var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
-                        (p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                         p.PowerDefinition.Name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                    if (actionSurgePower != null && hero.GetRemainingUsesOfPower(actionSurgePower) > 0)
+                    var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
+                        p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0);
+                    if (power != null && hero.GetRemainingUsesOfPower(power) > 0)
                     {
-                        hero.UsePower(actionSurgePower);
-                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge / Tatendrank!");
+                        hero.UsePower(power);
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Action Surge!");
                     }
                 }
 
-                // 3. Auto-Weapon Swap tailored specifically to Fighter archetype (Melee vs Ranged)
                 CheckAndAutoSwapWeapons(character, isRangedArchetype);
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteFighterTactics for {character?.Name}: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteFighterTactics: {ex}"); }
         }
 
-        /// <summary>
-        /// Executes Druid Wild Shape tactics (Wild Shape / Tiergestalt & Support Spells) based on individual toggles.
-        /// </summary>
         public static void ExecuteDruidTactics(GameLocationCharacter character)
         {
             try
             {
-                if (character == null || character.RulesetCharacter == null) return;
-                
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null || hero.UsablePowers == null) return;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.UsablePowers == null) return;
 
-                // 1. Wild Shape / Tiergestalt trigger when HP < 75% (if toggle enabled)
                 if (ModSettings.EnableDruidWildShape)
                 {
                     int currentHp = hero.CurrentHitPoints;
                     int maxHp = currentHp + hero.MissingHitPoints;
-
-                    var wildShapePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                    var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
                         (p.PowerDefinition.Name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 ||
                          p.PowerDefinition.Name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                    if (wildShapePower != null && hero.GetRemainingUsesOfPower(wildShapePower) > 0 && maxHp > 0 && ((float)currentHp / maxHp * 100f) < 75f)
+                    if (power != null && hero.GetRemainingUsesOfPower(power) > 0 && maxHp > 0 && ((float)currentHp / maxHp * 100f) < 75f)
                     {
-                        hero.UsePower(wildShapePower);
-                        ModEntry?.Logger.Log($"[SolastaAI] Druid Skill: {character.Name} activated Wild Shape / Tiergestalt! (HP: {currentHp}/{maxHp})");
+                        hero.UsePower(power);
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Wild Shape!");
                     }
                 }
 
-                // 2. Protection from Poison
                 CheckAndCastProtectionFromPoison(character);
-
-                // 3. Ally Healing Check
                 CheckAndHealAllies(character);
-
-                // 4. Auto-Weapon Swap for Druids
-                CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
+                CheckAndAutoSwapWeapons(character, false);
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteDruidTactics for {character?.Name}: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteDruidTactics: {ex}"); }
         }
 
-        /// <summary>
-        /// Executes Shillelagh Druid Melee tactics based on individual toggles.
-        /// Programmatically instantiates and casts Shillelagh and advances towards melee target while using ranged cantrip/bow if out of reach.
-        /// </summary>
         public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
         {
             try
             {
-                if (character == null || character.RulesetCharacter == null) return;
-                
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null) return;
 
-                // 1. Cast Shillelagh on melee weapon if enabled & available
+                // Cast Shillelagh
                 if (ModSettings.EnableSpellShillelagh && hero.SpellRepertoires != null)
                 {
-                    foreach (var repertoire in hero.SpellRepertoires)
+                    foreach (var rep in hero.SpellRepertoires)
                     {
-                        if (repertoire == null) continue;
-                        var shillelaghSpell = repertoire.KnownCantrips.Find(s => s != null && 
+                        if (rep == null) continue;
+                        var spell = rep.KnownCantrips.Find(s => s != null &&
                             (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
                              s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
+                        if (spell == null) continue;
 
-                        if (shillelaghSpell != null && repertoire.CanCastSpell(shillelaghSpell, true))
+                        // Temporarily bypass our own block for this explicit cast
+                        var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                        if (impl != null)
                         {
-                            var implService = ServiceRepository.GetService<IRulesetImplementationService>();
-                            if (implService != null)
+                            var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
+                            if (effect != null)
                             {
-                                var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, shillelaghSpell, 0, false);
-                                if (effectSpell != null)
-                                {
-                                    hero.CastSpell(effectSpell, true, false);
-                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} successfully cast Shillelagh / Zauberstock!");
-                                }
+                                hero.CastSpell(effect, true, false);
+                                ModEntry?.Logger.Log($"[SolastaAI] {character.Name} cast Shillelagh!");
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                CheckAndCastProtectionFromPoison(character);
+                CheckAndHealAllies(character);
+
+                // Check distance - use ranged cantrips while advancing only when explicitly called
+                int minDist = GetMinDistanceToEnemy(character);
+                if (minDist > 2)
+                {
+                    // Cast Guidance while advancing (handled by melee package moving us forward)
+                    bool castGuidance = false;
+                    if (ModSettings.EnableSpellGuidance && hero.SpellRepertoires != null)
+                    {
+                        foreach (var rep in hero.SpellRepertoires)
+                        {
+                            if (rep == null) continue;
+                            var spell = rep.KnownCantrips.Find(s => s != null &&
+                                s.Name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0);
+                            if (spell == null || !rep.CanCastSpell(spell, true)) continue;
+                            var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                            if (impl != null)
+                            {
+                                var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
+                                if (effect != null) { hero.CastSpell(effect, true, false); castGuidance = true; }
                             }
                             break;
                         }
                     }
+                    if (!castGuidance)
+                    {
+                        // Switch to ranged weapon so we can shoot while the melee package moves us forward
+                        CheckAndAutoSwapWeapons(character, true);
+                    }
                 }
-
-                // 2. Protection from Poison
-                CheckAndCastProtectionFromPoison(character);
-
-                // 3. Ally Healing Check
-                CheckAndHealAllies(character);
-
-                // 4. Enemy Distance & Guidance / Ranged Cantrip Advance Check
-                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
-                if (battleService != null && battleService.IsBattleInProgress && battleService.Battle != null)
+                else
                 {
-                    int minDistance = int.MaxValue;
-                    var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battleService.Battle.EnemyContenders : battleService.Battle.PlayerContenders;
-                    if (enemies != null && enemies.Count > 0)
-                    {
-                        var posA = character.LocationPosition;
-                        foreach (var enemy in enemies)
-                        {
-                            if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
-                                continue;
-
-                            var posB = enemy.LocationPosition;
-                            int dx = Math.Abs(posA.x - posB.x);
-                            int dz = Math.Abs(posA.z - posB.z);
-                            int dy = Math.Abs(posA.y - posB.y);
-                            int dist = Math.Max(dx, Math.Max(dy, dz));
-
-                            if (dist < minDistance)
-                            {
-                                minDistance = dist;
-                            }
-                        }
-                    }
-
-                    // If NO enemy is in melee reach (> 2 cells):
-                    if (minDistance > 2)
-                    {
-                        bool castGuidance = false;
-                        if (ModSettings.EnableSpellGuidance && hero.SpellRepertoires != null)
-                        {
-                            foreach (var repertoire in hero.SpellRepertoires)
-                            {
-                                if (repertoire == null) continue;
-                                var guidanceSpell = repertoire.KnownCantrips.Find(s => s != null && 
-                                    (s.Name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     s.Name.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                     s.Name.IndexOf("GoettlicheFuehrung", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                                if (guidanceSpell != null && repertoire.CanCastSpell(guidanceSpell, true))
-                                {
-                                    var implService = ServiceRepository.GetService<IRulesetImplementationService>();
-                                    if (implService != null)
-                                    {
-                                        var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, guidanceSpell, 0, false);
-                                        if (effectSpell != null)
-                                        {
-                                            hero.CastSpell(effectSpell, true, false);
-                                            ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} advancing towards melee target ({minDistance} cells) & cast Guidance / Göttliche Führung!");
-                                            castGuidance = true;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-
-                        // If Guidance not available, use Ranged Cantrip / Bow WHILE advancing towards melee target!
-                        if (!castGuidance)
-                        {
-                            CheckAndAutoSwapWeapons(character, isRangedArchetype: true);
-                        }
-                    }
-                    else
-                    {
-                        // Enemy IS in melee reach: equip Melee weapon set with Shillelagh!
-                        CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
-                    }
+                    // In melee range: ensure melee weapon equipped
+                    CheckAndAutoSwapWeapons(character, false);
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteShillelaghDruidTactics for {character?.Name}: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteShillelaghDruidTactics: {ex}"); }
         }
 
-        /// <summary>
-        /// Checks party members for poison condition and casts Protection from Poison / Schutz vor Gift if enabled & available.
-        /// </summary>
+        public static int GetMinDistanceToEnemy(GameLocationCharacter character)
+        {
+            try
+            {
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService?.IsBattleInProgress != true || battleService.Battle == null) return int.MaxValue;
+                var enemies = (character.Side == RuleDefinitions.Side.Ally)
+                    ? battleService.Battle.EnemyContenders
+                    : battleService.Battle.PlayerContenders;
+                if (enemies == null || enemies.Count == 0) return int.MaxValue;
+                int min = int.MaxValue;
+                var posA = character.LocationPosition;
+                foreach (var enemy in enemies)
+                {
+                    if (enemy?.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth) continue;
+                    var posB = enemy.LocationPosition;
+                    int dist = Math.Max(Math.Abs(posA.x - posB.x), Math.Max(Math.Abs(posA.y - posB.y), Math.Abs(posA.z - posB.z)));
+                    if (dist < min) min = dist;
+                }
+                return min;
+            }
+            catch { return int.MaxValue; }
+        }
+
         public static void CheckAndCastProtectionFromPoison(GameLocationCharacter character)
         {
             try
             {
-                if (!ModSettings.EnableSpellProtectionFromPoison || character == null || character.RulesetCharacter == null) return;
-
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null || hero.SpellRepertoires == null) return;
-
+                if (!ModSettings.EnableSpellProtectionFromPoison) return;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.SpellRepertoires == null) return;
                 var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                if (charService == null || charService.PartyCharacters == null) return;
-
+                if (charService?.PartyCharacters == null) return;
                 foreach (var ally in charService.PartyCharacters)
                 {
-                    if (ally == null || ally.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
-                        continue;
-
-                    bool isPoisoned = ally.RulesetCharacter.HasConditionOfType("ConditionPoisoned");
-                    if (isPoisoned)
+                    if (ally?.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth) continue;
+                    if (!ally.RulesetCharacter.HasConditionOfType("ConditionPoisoned")) continue;
+                    foreach (var rep in hero.SpellRepertoires)
                     {
-                        foreach (var repertoire in hero.SpellRepertoires)
-                        {
-                            if (repertoire == null) continue;
-                            var poisonSpell = repertoire.PreparedSpells.Find(s => s != null && 
-                                (s.Name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 s.Name.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 s.Name.IndexOf("Poison", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                            if (poisonSpell != null && repertoire.CanCastSpell(poisonSpell, true))
-                            {
-                                var implService = ServiceRepository.GetService<IRulesetImplementationService>();
-                                if (implService != null)
-                                {
-                                    var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, poisonSpell, 2, false);
-                                    if (effectSpell != null)
-                                    {
-                                        hero.CastSpell(effectSpell, false, false);
-                                        ModEntry?.Logger.Log($"[SolastaAI] Druid Protection: {character.Name} cast Protection from Poison on {ally.Name}!");
-                                        return;
-                                    }
-                                }
-                            }
-                        }
+                        if (rep == null) continue;
+                        var spell = rep.PreparedSpells.Find(s => s != null && s.Name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0);
+                        if (spell == null || !rep.CanCastSpell(spell, true)) continue;
+                        var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                        if (impl == null) continue;
+                        var effect = impl.InstantiateEffectSpell(hero, rep, spell, 2, false);
+                        if (effect != null) { hero.CastSpell(effect, false, false); return; }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndCastProtectionFromPoison: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndCastProtectionFromPoison: {ex}"); }
         }
 
-        /// <summary>
-        /// Helper to check party member health and cast healing spells if any ally has HP < 50%.
-        /// Respects EnableSpellCureWounds and EnableSpellHealingWord toggles.
-        /// </summary>
         public static void CheckAndHealAllies(GameLocationCharacter character)
         {
             try
             {
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null || hero.SpellRepertoires == null) return;
-
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.SpellRepertoires == null) return;
                 var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                if (charService == null || charService.PartyCharacters == null) return;
-
+                if (charService?.PartyCharacters == null) return;
                 foreach (var ally in charService.PartyCharacters)
                 {
-                    if (ally == null || ally.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
-                        continue;
-
+                    if (ally?.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth) continue;
                     int allyHp = ally.RulesetCharacter.CurrentHitPoints;
-                    int allyMaxHp = allyHp + ally.RulesetCharacter.MissingHitPoints;
-                    if (allyMaxHp > 0 && ((float)allyHp / allyMaxHp * 100f) < 50f)
+                    int allyMax = allyHp + ally.RulesetCharacter.MissingHitPoints;
+                    if (allyMax <= 0 || ((float)allyHp / allyMax * 100f) >= 50f) continue;
+                    foreach (var rep in hero.SpellRepertoires)
                     {
-                        foreach (var repertoire in hero.SpellRepertoires)
-                        {
-                            if (repertoire == null) continue;
-                            var healSpell = repertoire.PreparedSpells.Find(s => s != null && 
-                                ((ModSettings.EnableSpellCureWounds && s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                                 (ModSettings.EnableSpellHealingWord && s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)));
-
-                            if (healSpell != null && repertoire.CanCastSpell(healSpell, true))
-                            {
-                                var implService = ServiceRepository.GetService<IRulesetImplementationService>();
-                                if (implService != null)
-                                {
-                                    var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, healSpell, 1, false);
-                                    if (effectSpell != null)
-                                    {
-                                        hero.CastSpell(effectSpell, false, false);
-                                        ModEntry?.Logger.Log($"[SolastaAI] Druid Healing Support: {character.Name} healing ally {ally.Name} (HP: {allyHp}/{allyMaxHp})!");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        if (rep == null) continue;
+                        var spell = rep.PreparedSpells.Find(s => s != null &&
+                            ((ModSettings.EnableSpellCureWounds && s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                             (ModSettings.EnableSpellHealingWord && s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)));
+                        if (spell == null || !rep.CanCastSpell(spell, true)) continue;
+                        var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                        if (impl == null) continue;
+                        var effect = impl.InstantiateEffectSpell(hero, rep, spell, 1, false);
+                        if (effect != null) { hero.CastSpell(effect, false, false); break; }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndHealAllies: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndHealAllies: {ex}"); }
         }
 
-        /// <summary>
-        /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
-        /// Respects EnableAvoidOpportunityAttacks setting for Ranged Fighters.
-        /// Ensures Ranged Fighters stay at distance and DO NOT advance adjacent to enemies.
-        /// </summary>
         public static void CheckAndAutoSwapWeapons(GameLocationCharacter character, bool isRangedArchetype = false)
         {
             try
             {
-                if (!ModSettings.EnableAutoWeaponSwap || character == null || character.RulesetCharacter == null) return;
-
-                var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null || hero.CharacterInventory == null) return;
-
+                if (!ModSettings.EnableAutoWeaponSwap) return;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.CharacterInventory == null) return;
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
-                if (battleService == null || !battleService.IsBattleInProgress) return;
-
-                var battle = battleService.Battle;
-                if (battle == null) return;
+                if (battleService?.IsBattleInProgress != true) return;
 
                 var inventory = hero.CharacterInventory;
                 int currentConfig = inventory.CurrentConfiguration;
-                int otherConfig = (currentConfig == 0) ? 1 : 0;
+                int otherConfig = currentConfig == 0 ? 1 : 0;
                 bool currentlyRanged = hero.IsWieldingRangedWeapon();
+                int minDist = GetMinDistanceToEnemy(character);
 
-                // Calculate distance to closest alive enemy contender on tactical grid
-                int minDistance = int.MaxValue;
-                var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
-                if (enemies != null && enemies.Count > 0)
-                {
-                    var posA = character.LocationPosition;
-                    foreach (var enemy in enemies)
-                    {
-                        if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
-                            continue;
-
-                        var posB = enemy.LocationPosition;
-                        int dx = Math.Abs(posA.x - posB.x);
-                        int dz = Math.Abs(posA.z - posB.z);
-                        int dy = Math.Abs(posA.y - posB.y);
-                        int dist = Math.Max(dx, Math.Max(dy, dz));
-
-                        if (dist < minDistance)
-                        {
-                            minDistance = dist;
-                        }
-                    }
-                }
-
-                // RANGED ARCHETYPE TACTICAL POSITIONING & SAFETY:
                 if (isRangedArchetype)
                 {
-                    // If an enemy is in immediate melee reach (<= 2 cells):
-                    if (minDistance <= 2)
+                    if (minDist <= 2 && ModSettings.EnableAvoidOpportunityAttacks && currentlyRanged)
                     {
-                        if (ModSettings.EnableAvoidOpportunityAttacks && currentlyRanged)
-                        {
-                            inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                            if (!hero.IsWieldingRangedWeapon())
-                            {
-                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Safety: {character.Name} threatened in melee ({minDistance} cells). Switched to Melee Set to safely eliminate threat without opportunity attacks.");
-                            }
-                            else
-                            {
-                                inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
-                            }
-                        }
+                        inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                        if (hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                        else ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: melee threat at {minDist} cells, switched to melee set.");
                     }
-                    // If enemy is at safe distance (> 2 cells):
-                    else
+                    else if (minDist > 2 && !currentlyRanged)
                     {
-                        if (!currentlyRanged)
-                        {
-                            inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                            if (hero.IsWieldingRangedWeapon())
-                            {
-                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Safety: {character.Name} safe from melee ({minDistance} cells). Equipping Ranged Set!");
-                            }
-                            else
-                            {
-                                inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
-                            }
-                        }
+                        inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                        if (!hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                        else ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: at range {minDist} cells, switched to ranged set.");
                     }
                     return;
                 }
 
-                // GENERAL / MELEE AUTO-WEAPON SWAP LOGIC:
-                if (minDistance == int.MaxValue) return;
-
-                // If no enemy is in melee reach (> 2 cells) and currently holding Melee weapon:
-                if (minDistance > 2 && !currentlyRanged)
+                if (minDist > 2 && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                    if (hero.IsWieldingRangedWeapon())
-                    {
-                        ModEntry?.Logger.Log($"[SolastaAI] Auto-Weapon Swap: {character.Name} switched to Ranged Weapon Set (Config {otherConfig}) - Target distance: {minDistance} cells.");
-                    }
-                    else
-                    {
-                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
-                    }
+                    if (!hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                 }
-                // If enemy IS in melee reach (<= 2 cells) and currently holding Ranged weapon:
-                else if (minDistance <= 2 && currentlyRanged)
+                else if (minDist <= 2 && currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                    if (!hero.IsWieldingRangedWeapon())
-                    {
-                        ModEntry?.Logger.Log($"[SolastaAI] Auto-Weapon Swap: {character.Name} switched to Melee Weapon Set (Config {otherConfig}) - Target in melee reach ({minDistance} cells).");
-                    }
-                    else
-                    {
-                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
-                    }
+                    if (hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndAutoSwapWeapons: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndAutoSwapWeapons: {ex}"); }
         }
 
-        /// <summary>
-        /// Loads character AI choices from SavedAIControllers.json.
-        /// </summary>
         public static void LoadSavedChoices()
         {
             try
             {
-                if (File.Exists(SaveFilePath))
+                if (!File.Exists(SaveFilePath)) return;
+                string json = File.ReadAllText(SaveFilePath).Trim('{', '}', ' ', '\r', '\n');
+                CharacterAIChoices.Clear();
+                if (string.IsNullOrEmpty(json)) return;
+                foreach (var pair in json.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    string json = File.ReadAllText(SaveFilePath);
-                    CharacterAIChoices.Clear();
-                    
-                    json = json.Trim('{', '}', ' ', '\r', '\n');
-                    if (!string.IsNullOrEmpty(json))
+                    var kv = pair.Split(new char[] { ':' }, 2);
+                    if (kv.Length == 2)
                     {
-                        var pairs = json.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                        foreach (var pair in pairs)
-                        {
-                            var kv = pair.Split(new char[] { ':' }, 2);
-                            if (kv.Length == 2)
-                            {
-                                string name = kv[0].Trim(' ', '"', '\r', '\n');
-                                if (int.TryParse(kv[1].Trim(' ', '"', '\r', '\n'), out int choice))
-                                {
-                                    CharacterAIChoices[name] = choice;
-                                }
-                            }
-                        }
+                        string n = kv[0].Trim(' ', '"', '\r', '\n');
+                        if (int.TryParse(kv[1].Trim(' ', '"', '\r', '\n'), out int c)) CharacterAIChoices[n] = c;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error loading saved choices: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] LoadSavedChoices: {ex}"); }
         }
 
-        /// <summary>
-        /// Saves character AI choices to SavedAIControllers.json.
-        /// </summary>
         public static void SaveChoices()
         {
             try
             {
-                List<string> entries = new List<string>();
-                foreach (var kvp in CharacterAIChoices)
-                {
-                    entries.Add($"  \"{kvp.Key}\": {kvp.Value}");
-                }
-                string json = "{\n" + string.Join(",\n", entries.ToArray()) + "\n}";
-                File.WriteAllText(SaveFilePath, json);
+                var entries = new List<string>();
+                foreach (var kvp in CharacterAIChoices) entries.Add($"  \"{kvp.Key}\": {kvp.Value}");
+                File.WriteAllText(SaveFilePath, "{\n" + string.Join(",\n", entries.ToArray()) + "\n}");
             }
-            catch (Exception ex)
-            {
-                ModEntry?.Logger.Error($"[SolastaAI] Error saving choices: {ex}");
-            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] SaveChoices: {ex}"); }
         }
     }
 
-    /// <summary>
-    /// Harmony Patch on RulesetCharacter.GetRemainingUsesOfPower to intercept and enforce disabled powers in Solasta AI Engine.
-    /// </summary>
-    [HarmonyPatch(typeof(RulesetCharacter), nameof(RulesetCharacter.GetRemainingUsesOfPower))]
-    public static class RulesetCharacter_GetRemainingUsesOfPower_Patch
-    {
-        public static bool Prefix(RulesetCharacter __instance, RulesetUsablePower usablePower, ref int __result)
-        {
-            try
-            {
-                if (usablePower != null && usablePower.PowerDefinition != null)
-                {
-                    string name = usablePower.PowerDefinition.Name;
-
-                    // Wild Shape / Tiergestalt
-                    if (name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableDruidWildShape)
-                        {
-                            __result = 0;
-                            return false;
-                        }
-                    }
-
-                    // Second Wind / Durchschnaufen
-                    if (name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterSecondWind)
-                        {
-                            __result = 0;
-                            return false;
-                        }
-                    }
-
-                    // Action Surge / Tatendrank
-                    if (name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterActionSurge)
-                        {
-                            __result = 0;
-                            return false;
-                        }
-                    }
-
-                    // Maneuvers
-                    if (name.IndexOf("Indomitable", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Unbeugsam", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterIndomitable) { __result = 0; return false; }
-                    }
-                    if (name.IndexOf("PushingAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterPushingAttack) { __result = 0; return false; }
-                    }
-                    if (name.IndexOf("TripAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterTripAttack) { __result = 0; return false; }
-                    }
-                    if (name.IndexOf("Riposte", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterRiposte) { __result = 0; return false; }
-                    }
-                    if (name.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableFighterPrecisionAttack) { __result = 0; return false; }
-                    }
-                }
-            }
-            catch {}
-            return true;
-        }
-    }
+    // ===== HARMONY PATCHES =====
 
     /// <summary>
-    /// Harmony Patch on RulesetSpellRepertoire.CanCastSpell to intercept and enforce disabled spells in Solasta AI Engine.
-    /// </summary>
-    [HarmonyPatch(typeof(RulesetSpellRepertoire), nameof(RulesetSpellRepertoire.CanCastSpell), new Type[] { typeof(SpellDefinition), typeof(bool) })]
-    public static class RulesetSpellRepertoire_CanCastSpell_Patch
-    {
-        public static bool Prefix(SpellDefinition spellDefinition, ref bool __result)
-        {
-            try
-            {
-                if (spellDefinition != null)
-                {
-                    string name = spellDefinition.Name;
-
-                    // Cantrips
-                    if (name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellShillelagh) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("GoettlicheFuehrung", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellGuidance) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellProduceFlame) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellThornWhip) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellPoisonSpray) { __result = false; return false; }
-                    }
-
-                    // 1st Level
-                    if (name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellCureWounds) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellHealingWord) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellEntangle) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellFaerieFire) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellFogCloud) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellGoodberry) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellJump) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellLongstrider) { __result = false; return false; }
-                    }
-
-                    // 2nd Level
-                    if (name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellProtectionFromPoison) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellBarkskin) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellFlamingSphere) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellHoldPerson) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellLesserRestoration) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellMoonbeam) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellSpikeGrowth) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellPassWithoutTrace) { __result = false; return false; }
-                    }
-
-                    // 3rd Level+
-                    if (name.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellCallLightning) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellDispelMagic) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellSleetStorm) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellWindWall) { __result = false; return false; }
-                    }
-                    if (name.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (!Main.ModSettings.EnableSpellDaylight) { __result = false; return false; }
-                    }
-                }
-            }
-            catch {}
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Harmony Patch on GameLocationBattleManager.TriggerBattleEnd to guarantee all party members revert to Player Control after combat ends.
-    /// </summary>
-    [HarmonyPatch(typeof(GameLocationBattleManager), "TriggerBattleEnd")]
-    public static class GameLocationBattleManager_TriggerBattleEnd_Patch
-    {
-        public static void Postfix()
-        {
-            try
-            {
-                Main.EnsureExplorationControl();
-                Main.ModEntry?.Logger.Log("[SolastaAI] Combat ended. All party members restored to Player Control.");
-            }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in TriggerBattleEnd Postfix: {ex}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Harmony Patch on GameLocationCharacter.StartBattleTurn as a PREFIX so ControllerId and DecisionPackage are configured BEFORE turn initialization.
+    /// PREFIX on StartBattleTurn: Sets CurrentTurnCharacterName so all patches know whose turn it is.
+    /// Applies AI controller and runs class-specific tactics.
     /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
-    public static class GameLocationCharacter_StartBattleTurn_Patch
+    public static class Patch_StartBattleTurn
     {
         public static bool Prefix(GameLocationCharacter __instance)
         {
@@ -1350,60 +841,201 @@ namespace SolastaAI
                 string name = __instance.Name;
                 if (string.IsNullOrEmpty(name)) return true;
 
-                // Check Emergency Low HP Fallback (only if enabled)
+                // Update context so spell/power patches know the active character's mode
+                Main.CurrentTurnCharacterName = name;
+
+                // Emergency low HP fallback
                 if (Main.ModSettings.EnableEmergencyLowHpFallback && __instance.RulesetCharacter != null)
                 {
-                    int currentHp = __instance.RulesetCharacter.CurrentHitPoints;
-                    int maxHp = currentHp + __instance.RulesetCharacter.MissingHitPoints;
-                    if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
+                    int hp = __instance.RulesetCharacter.CurrentHitPoints;
+                    int max = hp + __instance.RulesetCharacter.MissingHitPoints;
+                    if (max > 0 && ((float)hp / max * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
                     {
-                        Main.ModEntry?.Logger.Log($"[SolastaAI] Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Switching to Human Control!");
+                        Main.ModEntry?.Logger.Log($"[SolastaAI] Emergency Fallback: {name} HP critical.");
+                        Main.CurrentTurnCharacterName = "";
                         Main.ApplyAIController(__instance, 0);
                         return true;
                     }
                 }
 
-                // Apply saved AI choice BEFORE StartBattleTurn body executes!
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice))
                 {
                     Main.ApplyAIController(__instance, choice);
-
-                    // If AI control is active, check and execute Class Tactics or auto-weapon swap
-                    if (choice == 5)
+                    switch (choice)
                     {
-                        Main.ExecuteDruidTactics(__instance);
-                    }
-                    else if (choice == 6)
-                    {
-                        Main.ExecuteShillelaghDruidTactics(__instance);
-                    }
-                    else if (choice == 7)
-                    {
-                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: false);
-                    }
-                    else if (choice == 8)
-                    {
-                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: true);
-                    }
-                    else if (choice > 0)
-                    {
-                        Main.CheckAndAutoSwapWeapons(__instance, isRangedArchetype: false);
+                        case Main.MODE_DRUID_WILD:       Main.ExecuteDruidTactics(__instance); break;
+                        case Main.MODE_DRUID_SHILLELAGH: Main.ExecuteShillelaghDruidTactics(__instance); break;
+                        case Main.MODE_FIGHTER_MELEE:    Main.ExecuteFighterTactics(__instance, false); break;
+                        case Main.MODE_FIGHTER_RANGED:   Main.ExecuteFighterTactics(__instance, true); break;
+                        default:
+                            if (choice > 0) Main.CheckAndAutoSwapWeapons(__instance, false);
+                            break;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in StartBattleTurn Prefix: {ex}");
-            }
+            catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_StartBattleTurn: {ex}"); }
             return true;
         }
     }
 
     /// <summary>
-    /// Harmony Patch on GameLocationCharacter.DamageSustained to trigger real-time Emergency Fallback when taking damage in combat.
+    /// POSTFIX on StartBattleTurn: Clears CurrentTurnCharacterName after turn setup is complete.
     /// </summary>
+    [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
+    public static class Patch_StartBattleTurn_Post
+    {
+        public static void Postfix(GameLocationCharacter __instance)
+        {
+            // Keep character name set during AI decision phase - cleared at turn end
+        }
+    }
+
+    /// <summary>
+    /// POSTFIX on EndBattleTurn: Clears CurrentTurnCharacterName.
+    /// </summary>
+    [HarmonyPatch(typeof(GameLocationCharacter), "EndBattleTurn")]
+    public static class Patch_EndBattleTurn
+    {
+        public static void Postfix() { Main.CurrentTurnCharacterName = ""; }
+    }
+
+    /// <summary>
+    /// Blocks disabled spells AND mode-inappropriate spells from AI evaluation (CanCastSpell).
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetSpellRepertoire), nameof(RulesetSpellRepertoire.CanCastSpell), new Type[] { typeof(SpellDefinition), typeof(bool) })]
+    public static class Patch_CanCastSpell
+    {
+        public static bool Prefix(SpellDefinition spellDefinition, ref bool __result)
+        {
+            try
+            {
+                if (spellDefinition != null && !Main.IsSpellEnabledForAI(spellDefinition.Name))
+                {
+                    __result = false;
+                    return false;
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Blocks disabled spells AND mode-inappropriate spells from AI evaluation (IsSpellReady).
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetSpellRepertoire), nameof(RulesetSpellRepertoire.IsSpellReady))]
+    public static class Patch_IsSpellReady
+    {
+        public static bool Prefix(SpellDefinition spellDefinition, ref bool __result)
+        {
+            try
+            {
+                if (spellDefinition != null && !Main.IsSpellEnabledForAI(spellDefinition.Name))
+                {
+                    __result = false;
+                    return false;
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Blocks disabled powers from AI evaluation (GetRemainingUsesOfPower).
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetCharacter), nameof(RulesetCharacter.GetRemainingUsesOfPower))]
+    public static class Patch_GetRemainingUsesOfPower
+    {
+        public static bool Prefix(RulesetUsablePower usablePower, ref int __result)
+        {
+            try
+            {
+                if (usablePower?.PowerDefinition != null && !Main.IsPowerEnabledForAI(usablePower.PowerDefinition.Name))
+                {
+                    __result = 0;
+                    return false;
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Last-resort block: prevents actual execution of disabled spells even if AI selected them.
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetCharacter), nameof(RulesetCharacter.CastSpell), new Type[] { typeof(RulesetEffectSpell), typeof(bool), typeof(bool) })]
+    public static class Patch_CastSpell
+    {
+        public static bool Prefix(RulesetEffectSpell effectSpell)
+        {
+            try
+            {
+                if (effectSpell?.SpellDefinition != null)
+                {
+                    string name = effectSpell.SpellDefinition.Name;
+                    // Only block if the spell is user-disabled (not mode-blocked, which is for AI selection only)
+                    // This allows our own code to cast Shillelagh explicitly while blocking AI from using disabled spells.
+                    int mode = Main.GetCurrentTurnCharacterMode();
+                    if (mode == Main.MODE_DRUID_SHILLELAGH)
+                    {
+                        // For Shillelagh Druid: only allow Shillelagh (our explicit cast) and healing/support spells
+                        // Block ranged attack cantrips from executing (AI shouldn't have selected them, but as last resort)
+                        if (name.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellProduceFlame) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
+                        if (name.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellThornWhip) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
+                        if (name.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellPoisonSpray) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
+                    }
+                    if (!Main.IsSpellEnabledForAI(name) && mode != Main.MODE_DRUID_SHILLELAGH)
+                    {
+                        Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}");
+                        return false;
+                    }
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Last-resort block: prevents actual execution of disabled powers.
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetCharacter), nameof(RulesetCharacter.UsePower))]
+    public static class Patch_UsePower
+    {
+        public static bool Prefix(RulesetUsablePower usablePower)
+        {
+            try
+            {
+                if (usablePower?.PowerDefinition != null && !Main.IsPowerEnabledForAI(usablePower.PowerDefinition.Name))
+                {
+                    Main.ModEntry?.Logger.Log($"[SolastaAI] UsePower blocked (disabled): {usablePower.PowerDefinition.Name}");
+                    return false;
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(GameLocationBattleManager), "TriggerBattleEnd")]
+    public static class Patch_TriggerBattleEnd
+    {
+        public static void Postfix()
+        {
+            try
+            {
+                Main.CurrentTurnCharacterName = "";
+                Main.EnsureExplorationControl();
+                Main.ModEntry?.Logger.Log("[SolastaAI] Combat ended. Party restored to Player Control.");
+            }
+            catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_TriggerBattleEnd: {ex}"); }
+        }
+    }
+
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.DamageSustained))]
-    public static class GameLocationCharacter_DamageSustained_Patch
+    public static class Patch_DamageSustained
     {
         public static void Postfix(GameLocationCharacter __instance)
         {
@@ -1412,27 +1044,19 @@ namespace SolastaAI
                 if (__instance == null || !Main.ModSettings.EnableEmergencyLowHpFallback) return;
                 string name = __instance.Name;
                 if (string.IsNullOrEmpty(name)) return;
-
-                if (Main.CharacterAIChoices.TryGetValue(name, out int choice) && choice > 0)
+                if (!Main.CharacterAIChoices.TryGetValue(name, out int choice) || choice == 0) return;
+                if (__instance.RulesetCharacter == null) return;
+                int hp = __instance.RulesetCharacter.CurrentHitPoints;
+                int max = hp + __instance.RulesetCharacter.MissingHitPoints;
+                if (max > 0 && ((float)hp / max * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
                 {
-                    if (__instance.RulesetCharacter != null)
-                    {
-                        int currentHp = __instance.RulesetCharacter.CurrentHitPoints;
-                        int maxHp = currentHp + __instance.RulesetCharacter.MissingHitPoints;
-                        if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
-                        {
-                            Main.ModEntry?.Logger.Log($"[SolastaAI] Damage Sustained! Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Reverting to Human Control!");
-                            Main.CharacterAIChoices[name] = 0; // Revert choice to Human
-                            Main.ApplyAIController(__instance, 0);
-                            Main.SaveChoices();
-                        }
-                    }
+                    Main.ModEntry?.Logger.Log($"[SolastaAI] Emergency Fallback on damage: {name}");
+                    Main.CharacterAIChoices[name] = 0;
+                    Main.ApplyAIController(__instance, 0);
+                    Main.SaveChoices();
                 }
             }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in DamageSustained Postfix: {ex}");
-            }
+            catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_DamageSustained: {ex}"); }
         }
     }
 }
