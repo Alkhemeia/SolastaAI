@@ -18,6 +18,7 @@ namespace SolastaAI
         public bool EnableAutoWeaponSwap = true;
 
         // Fighter Toggles
+        public string FighterStyle = "Melee"; // "Melee" or "Ranged"
         public bool EnableFighterSecondWind = true;
         public bool EnableFighterActionSurge = true;
         public bool EnableFighterIndomitable = true;
@@ -93,23 +94,21 @@ namespace SolastaAI
         public const int MODE_CASTER        = 3;
         public const int MODE_CLERIC        = 4;
         public const int MODE_DRUID         = 5;
-        public const int MODE_FIGHTER_MELEE = 6;
-        public const int MODE_FIGHTER_RANGED = 7;
-        public const int MODE_MAGE          = 8;
-        public const int MODE_ROGUE         = 9;
+        public const int MODE_FIGHTER       = 6;
+        public const int MODE_MAGE          = 7;
+        public const int MODE_ROGUE         = 8;
 
         public static readonly string[] AIPackageNames = new string[]
         {
             "Human (Player)",
             "AI: Melee (Default)",
-            "AI: Range (Backup Melee)",
-            "AI: Caster (Backup Attacks)",
+            "AI: Range (Default)",
+            "AI: Caster (Default)",
             "AI: Cleric Combat",
             "AI: Druid",
-            "AI: Fighter (Melee)",
-            "AI: Fighter (Ranged)",
-            "AI: Mage Combat",
-            "AI: Rogue Combat"
+            "AI: Fighter",
+            "AI: Mage",
+            "AI: Rogue"
         };
 
         public static bool Load(UnityModManager.ModEntry modEntry)
@@ -448,10 +447,20 @@ namespace SolastaAI
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
                     }
-                    else if (currentChoice == MODE_FIGHTER_MELEE || currentChoice == MODE_FIGHTER_RANGED)
+                    else if (currentChoice == MODE_FIGHTER)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Fighter Skill Controls for {displayName}:</i>");
+                        GUILayout.Label($"<i>✨ Fighter Combat Style & Skill Controls for {displayName}:</i>");
+
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>⚔️ Combat Style / Kampfstil:</b>");
+                        GUILayout.BeginHorizontal();
+                        bool isMeleeStyle = ModSettings.FighterStyle != "Ranged";
+                        if (GUILayout.Toggle(isMeleeStyle, "  <b>⚔️ Melee (Nahkampf)</b>", GUILayout.Width(150)))
+                            ModSettings.FighterStyle = "Melee";
+                        if (GUILayout.Toggle(!isMeleeStyle, "  <b>🏹 Ranged (Fernkampf)</b>", GUILayout.Width(150)))
+                            ModSettings.FighterStyle = "Ranged";
+                        GUILayout.EndHorizontal();
 
                         GUILayout.Space(3);
                         GUILayout.Label("  <b>🛡️ Defense & Recovery:</b>");
@@ -468,7 +477,7 @@ namespace SolastaAI
 
                         GUILayout.Space(3);
                         GUILayout.Label("  <b>🎯 Movement & Positioning:</b>");
-                        if (currentChoice == MODE_FIGHTER_RANGED)
+                        if (ModSettings.FighterStyle == "Ranged")
                             ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "     └─ <b>Avoid Opportunity Attacks</b>");
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "     └─ <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
@@ -583,9 +592,11 @@ namespace SolastaAI
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
                             case MODE_DRUID:          pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case MODE_FIGHTER_MELEE:  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
-                            // Ranged Fighter: CasterCombatDecisions keeps maximum distance from enemies.
-                            case MODE_FIGHTER_RANGED: pkg = db.GetElement("CasterCombatDecisions", true); break;
+                            case MODE_FIGHTER:
+                                pkg = (ModSettings.FighterStyle == "Ranged")
+                                    ? db.GetElement("CasterCombatDecisions", true)
+                                    : db.GetElement("DefaultMeleeWithBackupRangeDecisions", true);
+                                break;
                             case MODE_MAGE:           pkg = db.GetElement("CasterCombatDecisions", true); break;
                             case MODE_ROGUE:          pkg = db.GetElement("RogueCombatDecisions", true); break;
                             default:                  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
@@ -1011,8 +1022,7 @@ namespace SolastaAI
                     switch (choice)
                     {
                         case Main.MODE_DRUID:            Main.ExecuteDruidTactics(__instance); break;
-                        case Main.MODE_FIGHTER_MELEE:    Main.ExecuteFighterTactics(__instance, false); break;
-                        case Main.MODE_FIGHTER_RANGED:   Main.ExecuteFighterTactics(__instance, true); break;
+                        case Main.MODE_FIGHTER:          Main.ExecuteFighterTactics(__instance, Main.ModSettings.FighterStyle == "Ranged"); break;
                         default:
                             if (choice > 0) Main.CheckAndAutoSwapWeapons(__instance, false);
                             break;
@@ -1042,13 +1052,11 @@ namespace SolastaAI
                 if (!Main.CharacterAIChoices.TryGetValue(name, out int choice)) return;
                 if (__instance.ControllerId != PlayerControllerManager.DmControllerId) return;
 
-                switch (choice)
+                if (choice == Main.MODE_FIGHTER && Main.ModSettings.FighterStyle == "Ranged")
                 {
-                    case Main.MODE_FIGHTER_RANGED:
-                        // Spend move action to prevent advancing, but preserve it when
-                        // melee-threatened (retreat) or on lower ground (seek elevation).
-                        Main.HandleRangedFighterPositioning(__instance);
-                        break;
+                    // Spend move action to prevent advancing, but preserve it when
+                    // melee-threatened (retreat) or on lower ground (seek elevation).
+                    Main.HandleRangedFighterPositioning(__instance);
                 }
             }
             catch (Exception ex)
