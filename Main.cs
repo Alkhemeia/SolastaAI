@@ -89,9 +89,10 @@ namespace SolastaAIPersistence
                     var refreshGuiStateMethod = AccessTools.Method(PCCType, "RefreshGuiState");
                     if (refreshGuiStateMethod != null)
                     {
+                        var prefix = AccessTools.Method(typeof(PlayerControllerContext_RefreshGuiState_Patch), nameof(PlayerControllerContext_RefreshGuiState_Patch.Prefix));
                         var postfix = AccessTools.Method(typeof(PlayerControllerContext_RefreshGuiState_Patch), nameof(PlayerControllerContext_RefreshGuiState_Patch.Postfix));
-                        HarmonyInstance.Patch(refreshGuiStateMethod, postfix: new HarmonyMethod(postfix));
-                        ModEntry?.Logger.Log("[SolastaAIPersistence] Patched PlayerControllerContext.RefreshGuiState successfully.");
+                        HarmonyInstance.Patch(refreshGuiStateMethod, prefix: new HarmonyMethod(prefix), postfix: new HarmonyMethod(postfix));
+                        ModEntry?.Logger.Log("[SolastaAIPersistence] Patched PlayerControllerContext.RefreshGuiState successfully (Prefix & Postfix).");
                     }
 
                     if (UpdatePartyControllerIdsMethod != null)
@@ -211,6 +212,23 @@ namespace SolastaAIPersistence
 
     public static class PlayerControllerContext_RefreshGuiState_Patch
     {
+        public static bool Prefix()
+        {
+            try
+            {
+                var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
+                if (charService == null)
+                {
+                    return false; // Skip RefreshGuiState safely outside active game sessions
+                }
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
         public static void Postfix()
         {
             try
