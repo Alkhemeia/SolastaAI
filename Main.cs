@@ -84,6 +84,11 @@ namespace SolastaAI
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// Track dropdown menu open states per character in the UMM UI.
+        /// </summary>
+        private static Dictionary<string, bool> DropdownOpenStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// Human-readable names for available AI Decision Packages in the UMM UI.
         /// </summary>
         public static readonly string[] AIPackageNames = new string[]
@@ -130,7 +135,7 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Renders the Unity Mod Manager Options UI panel for SolastaAI with structured sections.
+        /// Renders the Unity Mod Manager Options UI panel for SolastaAI with dropdown selectors and dynamic mode-specific settings.
         /// </summary>
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
@@ -167,33 +172,11 @@ namespace SolastaAI
             );
             GUILayout.EndVertical();
 
-            GUILayout.Space(5);
-
-            // --- SECTION 2: CLASS & COMBAT TACTICS ---
-            GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>⚔️ Class Tactics & Combat Intelligence</b>");
-
-            ModSettings.EnableFighterTactics = GUILayout.Toggle(
-                ModSettings.EnableFighterTactics,
-                " <b>Enable Fighter Skill Automation</b> (Automatically executes Second Wind / Durchschnaufen & Action Surge / Tatendrank)"
-            );
-
-            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
-                ModSettings.EnableAvoidOpportunityAttacks,
-                " <b>Enable Opportunity Attack Protection for Ranged Fighters</b> (Fights adjacent threats in melee first before retreating safely)"
-            );
-
-            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                ModSettings.EnableAutoWeaponSwap,
-                " <b>Enable Auto-Weapon Swap</b> (Swaps between Melee & Ranged weapon sets based on enemy target distance)"
-            );
-            GUILayout.EndVertical();
-
             GUILayout.Space(10);
 
-            // --- SECTION 3: PARTY CHARACTER ARCHETYPE SELECTION ---
+            // --- SECTION 2: PARTY CHARACTER ARCHETYPE DROPDOWNS & DYNAMIC SUB-SETTINGS ---
             GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>👥 Party Character AI Archetype Selection</b>");
+            GUILayout.Label("<b>👥 Party Character AI Archetype Selection & Mode Settings</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
             if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
@@ -209,18 +192,81 @@ namespace SolastaAI
                         currentChoice = 0; // Default Human
                     }
 
-                    GUILayout.BeginHorizontal("box");
                     string displayName = character.RulesetCharacter != null ? character.RulesetCharacter.Name : name;
+                    string currentArchetypeName = AIPackageNames[currentChoice];
+
+                    GUILayout.BeginVertical("box");
+
+                    // 1. Character Dropdown Header
+                    GUILayout.BeginHorizontal();
                     GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(180));
-                    
-                    int newChoice = GUILayout.SelectionGrid(currentChoice, AIPackageNames, 4, GUILayout.ExpandWidth(true));
-                    if (newChoice != currentChoice)
+
+                    bool isOpen = DropdownOpenStates.TryGetValue(name, out bool open) && open;
+                    if (GUILayout.Button($"<b>{currentArchetypeName}</b> ▼", GUILayout.Width(260)))
                     {
-                        CharacterAIChoices[name] = newChoice;
-                        ApplyAIController(character, newChoice);
-                        SaveChoices();
+                        DropdownOpenStates[name] = !isOpen;
                     }
                     GUILayout.EndHorizontal();
+
+                    // 2. Dropdown Options List (renders when expanded)
+                    if (isOpen)
+                    {
+                        GUILayout.BeginVertical("box");
+                        for (int i = 0; i < AIPackageNames.Length; i++)
+                        {
+                            bool isSelected = (i == currentChoice);
+                            string prefix = isSelected ? "● " : "  ";
+                            if (GUILayout.Button($"{prefix}{AIPackageNames[i]}", GUILayout.ExpandWidth(true)))
+                            {
+                                CharacterAIChoices[name] = i;
+                                ApplyAIController(character, i);
+                                SaveChoices();
+                                DropdownOpenStates[name] = false;
+                            }
+                        }
+                        GUILayout.EndVertical();
+                    }
+
+                    // 3. DYNAMIC SUB-SETTINGS (Displayed below dropdown based on selected mode!)
+                    if (currentChoice == 5 || currentChoice == 6) // Fighter (Melee) or Fighter (Ranged)
+                    {
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+
+                        ModSettings.EnableFighterTactics = GUILayout.Toggle(
+                            ModSettings.EnableFighterTactics,
+                            "   └─ <b>Use Second Wind & Action Surge</b> (Automatic heal on low HP & extra actions)"
+                        );
+
+                        if (currentChoice == 6) // Fighter (Ranged)
+                        {
+                            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
+                                ModSettings.EnableAvoidOpportunityAttacks,
+                                "   └─ <b>Avoid Opportunity Attacks</b> (Fight adjacent threats in melee first before retreating)"
+                            );
+                        }
+
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                            ModSettings.EnableAutoWeaponSwap,
+                            "   └─ <b>Auto-Weapon Swap</b> (Switch between Melee and Ranged weapon sets based on distance)"
+                        );
+
+                        GUILayout.EndVertical();
+                    }
+                    else if (currentChoice > 0)
+                    {
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                            ModSettings.EnableAutoWeaponSwap,
+                            "   └─ <b>Auto-Weapon Swap</b> (Automatically equip ranged weapons when out of reach)"
+                        );
+
+                        GUILayout.EndVertical();
+                    }
+
+                    GUILayout.EndVertical();
                 }
             }
             else
