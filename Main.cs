@@ -9,13 +9,39 @@ using UnityModManagerNet;
 
 namespace SolastaAIPersistence
 {
+    /// <summary>
+    /// Configuration settings for SolastaAI persistent character AI management and tactical automation.
+    /// </summary>
     public class Settings : UnityModManager.ModSettings
     {
+        /// <summary>
+        /// When true, automatically reverts hero control back to Human (Player) if HP drops below the threshold.
+        /// </summary>
         public bool EnableEmergencyLowHpFallback = true;
+
+        /// <summary>
+        /// Percentage threshold of Max HP below which Emergency Fallback triggers (default: 30%).
+        /// </summary>
         public float EmergencyHpThresholdPercent = 30f;
+
+        /// <summary>
+        /// Enables the 'N' hotkey during combat to toggle active hero control mode.
+        /// </summary>
         public bool EnableHotkeyToggle = true;
+
+        /// <summary>
+        /// KeyCode used to toggle active character control during combat.
+        /// </summary>
         public KeyCode ToggleHotkey = KeyCode.N;
+
+        /// <summary>
+        /// Automatically swaps weapon sets to ranged if no enemy is reachable in melee range.
+        /// </summary>
         public bool EnableAutoWeaponSwap = true;
+
+        /// <summary>
+        /// Automatically applies AI control for guest/companion characters.
+        /// </summary>
         public bool AutoControlGuests = false;
 
         public override void Save(UnityModManager.ModEntry modEntry)
@@ -24,15 +50,31 @@ namespace SolastaAIPersistence
         }
     }
 
+    /// <summary>
+    /// Core entry point and static manager for SolastaAI mod.
+    /// </summary>
     public static class Main
     {
         public static UnityModManager.ModEntry ModEntry { get; private set; }
         public static Settings ModSettings { get; private set; }
         public static string SaveFilePath { get; private set; }
         
-        // Character Name -> AI Choice Index (0 = Human/Player, 1 = Melee, 2 = Range, 3 = Caster, 4 = Cleric, 5 = Fighter, 6 = Mage, 7 = Rogue)
+        /// <summary>
+        /// Dictionary mapping Character Name to selected AI Choice Index:
+        /// 0 = Human (Player)
+        /// 1 = AI: Melee (Default)
+        /// 2 = AI: Range (Backup Melee)
+        /// 3 = AI: Caster (Backup Attacks)
+        /// 4 = AI: Cleric Combat
+        /// 5 = AI: Fighter Combat
+        /// 6 = AI: Mage Combat
+        /// 7 = AI: Rogue Combat
+        /// </summary>
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Human-readable names for available AI Decision Packages in the UMM UI.
+        /// </summary>
         public static readonly string[] AIPackageNames = new string[]
         {
             "Human (Player)",
@@ -45,6 +87,9 @@ namespace SolastaAIPersistence
             "AI: Rogue Combat"
         };
 
+        /// <summary>
+        /// Unity Mod Manager Load method called during mod initialization at boot.
+        /// </summary>
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             try
@@ -72,16 +117,19 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Renders the Unity Mod Manager Options UI panel for SolastaAI.
+        /// </summary>
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>Solasta AI & AI Persistence Settings</b>", GUILayout.ExpandWidth(true));
+            GUILayout.Label("<b>SolastaAI - AI Control & Persistence Settings</b>", GUILayout.ExpandWidth(true));
             
             // Emergency Protection Toggle & Slider
             GUILayout.BeginHorizontal();
             ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(
                 ModSettings.EnableEmergencyLowHpFallback, 
-                " <b>Notfall-Schutz aktivieren</b> (Bei niedrigen TP automatisch auf manuelle Steuerung zurückschalten)"
+                " <b>Enable Emergency Protection</b> (Automatically revert to Human control on low HP)"
             );
             GUILayout.EndHorizontal();
 
@@ -89,7 +137,7 @@ namespace SolastaAIPersistence
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Space(20);
-                GUILayout.Label($"TP-Schwelle für Notfall-Schutz: <b>{Mathf.RoundToInt(ModSettings.EmergencyHpThresholdPercent)}% TP</b>", GUILayout.Width(280));
+                GUILayout.Label($"Emergency HP Threshold: <b>{Mathf.RoundToInt(ModSettings.EmergencyHpThresholdPercent)}% Max HP</b>", GUILayout.Width(280));
                 ModSettings.EmergencyHpThresholdPercent = GUILayout.HorizontalSlider(ModSettings.EmergencyHpThresholdPercent, 5f, 50f, GUILayout.Width(200));
                 GUILayout.EndHorizontal();
             }
@@ -97,21 +145,21 @@ namespace SolastaAIPersistence
             GUILayout.Space(5);
             ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                 ModSettings.EnableAutoWeaponSwap,
-                " <b>Automatischer Waffenwechsel</b> (Wechselt auf Fernkampf, wenn kein Nahkampfziel erreichbar ist)"
+                " <b>Enable Auto-Weapon Swap</b> (Automatically switch to ranged set if no target is in melee reach)"
             );
 
             ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
                 ModSettings.EnableHotkeyToggle, 
-                " <b>Hotkey 'N' im Kampf aktivieren</b> (Schaltet den aktiven Helden zwischen KI und Spieler um)"
+                " <b>Enable In-Combat Hotkey ('N')</b> (Toggles active hero control mode on the fly)"
             );
             
             ModSettings.AutoControlGuests = GUILayout.Toggle(
                 ModSettings.AutoControlGuests, 
-                " <b>Automatische KI für Gast-Charaktere</b>"
+                " <b>Enable Auto AI for Guest/Companion Characters</b>"
             );
             
             GUILayout.Space(15);
-            GUILayout.Label("<b>Aktive Helden-Steuerung (Party AI Controls):</b>");
+            GUILayout.Label("<b>Active Party Character AI Controls:</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
             if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
@@ -143,7 +191,7 @@ namespace SolastaAIPersistence
             }
             else
             {
-                GUILayout.Label("<i>(Keine aktive Gruppe geladen. Starte oder lade einen Spielstand, um Helden zu konfigurieren.)</i>");
+                GUILayout.Label("<i>(No active party loaded. Load or start a campaign session to configure active heroes.)</i>");
             }
 
             GUILayout.EndVertical();
@@ -155,6 +203,9 @@ namespace SolastaAIPersistence
             SaveChoices();
         }
 
+        /// <summary>
+        /// Frame update listener used to detect the 'N' hotkey during combat turns.
+        /// </summary>
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
         {
             if (!ModSettings.EnableHotkeyToggle) return;
@@ -165,6 +216,9 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Toggles AI vs Human control for the active contender in combat when hotkey 'N' is pressed.
+        /// </summary>
         public static void ToggleActiveCharacterAI()
         {
             try
@@ -201,6 +255,9 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Applies the requested Controller ID and Decision Package to the specified character.
+        /// </summary>
         public static void ApplyAIController(GameLocationCharacter character, int choice)
         {
             if (character == null) return;
@@ -208,10 +265,12 @@ namespace SolastaAIPersistence
             {
                 if (choice <= 0)
                 {
+                    // Human / Player Control
                     character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
                 }
                 else
                 {
+                    // AI / DM Computer Control (Controller ID = 4242)
                     character.ControllerId = PlayerControllerManager.DmControllerId;
 
                     var decisionPackageDb = DatabaseRepository.GetDatabase<TA.AI.DecisionPackageDefinition>();
@@ -255,6 +314,9 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
+        /// </summary>
         public static void CheckAndAutoSwapWeapons(GameLocationCharacter character)
         {
             try
@@ -270,7 +332,7 @@ namespace SolastaAIPersistence
                 var battle = battleService.Battle;
                 if (battle == null) return;
 
-                // Find closest alive enemy contender
+                // Find closest alive enemy contender on tactical grid
                 int minDistance = int.MaxValue;
                 var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
                 if (enemies == null || enemies.Count == 0) return;
@@ -301,7 +363,7 @@ namespace SolastaAIPersistence
 
                 bool currentlyRanged = hero.IsWieldingRangedWeapon();
 
-                // If no enemy in melee reach (> 2 cells) and currently holding Melee weapon:
+                // If no enemy is in melee reach (> 2 cells) and currently holding Melee weapon:
                 if (minDistance > 2 && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
@@ -336,6 +398,9 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Loads character AI choices from SavedAIControllers.json.
+        /// </summary>
         public static void LoadSavedChoices()
         {
             try
@@ -370,6 +435,9 @@ namespace SolastaAIPersistence
             }
         }
 
+        /// <summary>
+        /// Saves character AI choices to SavedAIControllers.json.
+        /// </summary>
         public static void SaveChoices()
         {
             try
@@ -389,6 +457,9 @@ namespace SolastaAIPersistence
         }
     }
 
+    /// <summary>
+    /// Harmony Patch on GameLocationCharacter.StartBattleTurn to apply AI controllers, emergency low HP fallback, and auto weapon swapping.
+    /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
     public static class GameLocationCharacter_StartBattleTurn_Patch
     {
@@ -413,12 +484,12 @@ namespace SolastaAIPersistence
                     }
                 }
 
-                // Apply saved choice
+                // Apply saved AI choice
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice))
                 {
                     Main.ApplyAIController(__instance, choice);
 
-                    // If AI is active, check and auto-swap weapon if needed
+                    // If AI control is active, check and perform auto-weapon swap if necessary
                     if (choice > 0)
                     {
                         Main.CheckAndAutoSwapWeapons(__instance);
@@ -432,6 +503,9 @@ namespace SolastaAIPersistence
         }
     }
 
+    /// <summary>
+    /// Harmony Patch on GameLocationCharacter.DamageSustained to trigger real-time Emergency Fallback when taking damage in combat.
+    /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.DamageSustained))]
     public static class GameLocationCharacter_DamageSustained_Patch
     {
@@ -452,7 +526,7 @@ namespace SolastaAIPersistence
                         if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
                         {
                             Main.ModEntry?.Logger.Log($"[SolastaAI] Damage Sustained! Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Reverting to Human Control!");
-                            Main.CharacterAIChoices[name] = 0; // Revert choice
+                            Main.CharacterAIChoices[name] = 0; // Revert choice to Human
                             Main.ApplyAIController(__instance, 0);
                             Main.SaveChoices();
                         }
