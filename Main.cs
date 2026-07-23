@@ -45,6 +45,11 @@ namespace SolastaAI
         public bool EnableFighterTactics = true;
 
         /// <summary>
+        /// Enables Opportunity Attack protection for Ranged Fighters (eliminating adjacent threats in melee first).
+        /// </summary>
+        public bool EnableAvoidOpportunityAttacks = true;
+
+        /// <summary>
         /// Automatically applies AI control for guest/companion characters.
         /// </summary>
         public bool AutoControlGuests = false;
@@ -125,20 +130,22 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Renders the Unity Mod Manager Options UI panel for SolastaAI.
+        /// Renders the Unity Mod Manager Options UI panel for SolastaAI with structured sections.
         /// </summary>
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>SolastaAI Settings</b>", GUILayout.ExpandWidth(true));
+            GUILayout.Label("<b><size=14>SolastaAI - Advanced AI & Tactical Settings</size></b>", GUILayout.ExpandWidth(true));
+            GUILayout.Space(5);
+
+            // --- SECTION 1: GLOBAL SAFETY & HOTKEY SETTINGS ---
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("<b>🛡️ Global Safety & Hotkey Settings</b>");
             
-            // Emergency Protection Toggle & Slider
-            GUILayout.BeginHorizontal();
             ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(
                 ModSettings.EnableEmergencyLowHpFallback, 
-                " <b>Enable Emergency Protection</b> (Automatically revert to Human control on low HP)"
+                " <b>Enable Emergency Low HP Protection</b> (Reverts hero to Human control when HP drops below threshold)"
             );
-            GUILayout.EndHorizontal();
 
             if (ModSettings.EnableEmergencyLowHpFallback)
             {
@@ -149,29 +156,44 @@ namespace SolastaAI
                 GUILayout.EndHorizontal();
             }
 
-            GUILayout.Space(5);
-            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                ModSettings.EnableAutoWeaponSwap,
-                " <b>Enable Auto-Weapon Swap</b> (Automatically switch to ranged set if no target is in melee reach)"
-            );
-
-            ModSettings.EnableFighterTactics = GUILayout.Toggle(
-                ModSettings.EnableFighterTactics,
-                " <b>Enable Fighter Class Tactics</b> (Automatic use of Second Wind / Durchschnaufen, Action Surge / Tatendrank & Fighter Archetypes)"
-            );
-
             ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
                 ModSettings.EnableHotkeyToggle, 
-                " <b>Enable In-Combat Hotkey ('N')</b> (Toggles active hero control mode on the fly)"
+                " <b>Enable In-Combat Quick Hotkey ('N')</b> (Toggles active hero AI/Human control on the fly)"
             );
             
             ModSettings.AutoControlGuests = GUILayout.Toggle(
                 ModSettings.AutoControlGuests, 
-                " <b>Enable Auto AI for Guest/Companion Characters</b>"
+                " <b>Enable Auto AI for Guest & Companion Characters</b>"
             );
-            
-            GUILayout.Space(15);
-            GUILayout.Label("<b>Active Party Character AI Controls:</b>");
+            GUILayout.EndVertical();
+
+            GUILayout.Space(5);
+
+            // --- SECTION 2: CLASS & COMBAT TACTICS ---
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("<b>⚔️ Class Tactics & Combat Intelligence</b>");
+
+            ModSettings.EnableFighterTactics = GUILayout.Toggle(
+                ModSettings.EnableFighterTactics,
+                " <b>Enable Fighter Skill Automation</b> (Automatically executes Second Wind / Durchschnaufen & Action Surge / Tatendrank)"
+            );
+
+            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
+                ModSettings.EnableAvoidOpportunityAttacks,
+                " <b>Enable Opportunity Attack Protection for Ranged Fighters</b> (Fights adjacent threats in melee first before retreating safely)"
+            );
+
+            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                ModSettings.EnableAutoWeaponSwap,
+                " <b>Enable Auto-Weapon Swap</b> (Swaps between Melee & Ranged weapon sets based on enemy target distance)"
+            );
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+
+            // --- SECTION 3: PARTY CHARACTER ARCHETYPE SELECTION ---
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("<b>👥 Party Character AI Archetype Selection</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
             if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
@@ -189,7 +211,7 @@ namespace SolastaAI
 
                     GUILayout.BeginHorizontal("box");
                     string displayName = character.RulesetCharacter != null ? character.RulesetCharacter.Name : name;
-                    GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(200));
+                    GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(180));
                     
                     int newChoice = GUILayout.SelectionGrid(currentChoice, AIPackageNames, 4, GUILayout.ExpandWidth(true));
                     if (newChoice != currentChoice)
@@ -203,8 +225,9 @@ namespace SolastaAI
             }
             else
             {
-                GUILayout.Label("<i>(No active party loaded. Load or start a campaign session to configure active heroes.)</i>");
+                GUILayout.Label("<i>(No active party loaded. Start or load a campaign session to configure active heroes.)</i>");
             }
+            GUILayout.EndVertical();
 
             GUILayout.EndVertical();
         }
@@ -446,7 +469,7 @@ namespace SolastaAI
 
         /// <summary>
         /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
-        /// For Ranged Fighters, prevents opportunity attacks by forcing Melee combat against adjacent threats first before retreating.
+        /// Respects EnableAvoidOpportunityAttacks setting for Ranged Fighters.
         /// </summary>
         public static void CheckAndAutoSwapWeapons(GameLocationCharacter character, bool isRangedArchetype = false)
         {
@@ -495,10 +518,8 @@ namespace SolastaAI
                 // RANGED FIGHTER TACTICAL OPPORTUNITY ATTACK PREVENTION:
                 if (isRangedArchetype)
                 {
-                    // 1. Immediate Melee Threat (dist <= 1 cell):
-                    //    To prevent triggering opportunity attacks, do NOT run away blindly.
-                    //    Switch to Melee weapon set to defeat/eliminate the adjacent threat first!
-                    if (minDistance <= 1)
+                    // If Opportunity Attack Protection is enabled AND an enemy is in immediate melee reach (dist <= 1 cell):
+                    if (ModSettings.EnableAvoidOpportunityAttacks && minDistance <= 1)
                     {
                         if (currentlyRanged)
                         {
@@ -513,8 +534,7 @@ namespace SolastaAI
                             }
                         }
                     }
-                    // 2. Safe Distance (dist > 1 cell):
-                    //    No enemy in immediate melee range. Equip Ranged Set and unleash archery!
+                    // Otherwise (Safe distance or protection toggle disabled):
                     else
                     {
                         if (!currentlyRanged)
