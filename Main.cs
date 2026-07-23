@@ -867,10 +867,11 @@ namespace SolastaAI
                     var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
                     if (effect == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh effect is null!"); break; }
 
-                    // Cast spell directly on RulesetCharacter level (safe & stable execution)
+                    // Cast spell on RulesetCharacter level AND apply effect forms directly
                     hero.CastSpell(effect, true, false);
+                    effect.ApplyEffectOnCharacter(hero, true, character.LocationPosition);
                     character.SpendActionType(ActionDefinitions.ActionType.Bonus);
-                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast successfully!");
+                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast and effect applied successfully!");
                     break;
                 }
             }
