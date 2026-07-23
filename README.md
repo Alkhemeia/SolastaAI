@@ -1,6 +1,6 @@
 # SolastaAI
 
-A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
+A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, Fighter class automation, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
 
 ## 🌟 Key Features
 
@@ -15,18 +15,22 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Range (Backup Melee)`
      - `AI: Caster (Backup Attacks)`
      - `AI: Cleric Combat`
-     - `AI: Fighter Combat`
+     - `AI: Fighter (Melee)` - Focused on frontline melee aggression with automatic weapon swap if out of reach.
+     - `AI: Fighter (Ranged)` - Focused on ranged archery positioning and ranged volleys.
      - `AI: Mage Combat`
      - `AI: Rogue Combat`
-3. **Automatic Weapon Swapping:**
+3. **Fighter Class Tactics & Skill Automation:**
+   - **Second Wind:** Automatically triggered when a Fighter's HP drops below **60%** to heal.
+   - **Action Surge:** Automatically activated during combat to grant extra actions and attacks.
+4. **Automatic Weapon Swapping:**
    - Automatically evaluates tactical grid distances during a character's turn.
    - If no enemy is reachable in melee range ($\le 2$ cells), the hero automatically switches to their secondary ranged weapon set (bow/crossbow) to attack from afar.
    - Automatically switches back to the melee weapon set when an enemy moves into melee reach.
-4. **Emergency Low HP Protection:**
+5. **Emergency Low HP Protection:**
    - Automatically switches hero control back to the player if their hit points drop below a configurable threshold (5% - 50% Max HP, default: **30%**), preventing accidental AI wipes.
-5. **In-Combat Quick Hotkey (`N`):**
+6. **In-Combat Quick Hotkey (`N`):**
    - Press **`N`** during combat to instantly toggle AI / Manual control for the currently active turn character.
-6. **Persistent Storage:**
+7. **Persistent Storage:**
    - Remembers choices automatically across map transitions, battle start/stop, and save game reloads via `SavedAIControllers.json`.
 
 ---

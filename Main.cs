@@ -40,6 +40,11 @@ namespace SolastaAI
         public bool EnableAutoWeaponSwap = true;
 
         /// <summary>
+        /// Enables Fighter class skill automation (Second Wind, Action Surge).
+        /// </summary>
+        public bool EnableFighterTactics = true;
+
+        /// <summary>
         /// Automatically applies AI control for guest/companion characters.
         /// </summary>
         public bool AutoControlGuests = false;
@@ -66,9 +71,10 @@ namespace SolastaAI
         /// 2 = AI: Range (Backup Melee)
         /// 3 = AI: Caster (Backup Attacks)
         /// 4 = AI: Cleric Combat
-        /// 5 = AI: Fighter Combat
-        /// 6 = AI: Mage Combat
-        /// 7 = AI: Rogue Combat
+        /// 5 = AI: Fighter (Melee)
+        /// 6 = AI: Fighter (Ranged / Archer)
+        /// 7 = AI: Mage Combat
+        /// 8 = AI: Rogue Combat
         /// </summary>
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -82,7 +88,8 @@ namespace SolastaAI
             "AI: Range (Backup Melee)",
             "AI: Caster (Backup Attacks)",
             "AI: Cleric Combat",
-            "AI: Fighter Combat",
+            "AI: Fighter (Melee)",
+            "AI: Fighter (Ranged)",
             "AI: Mage Combat",
             "AI: Rogue Combat"
         };
@@ -146,6 +153,11 @@ namespace SolastaAI
             ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                 ModSettings.EnableAutoWeaponSwap,
                 " <b>Enable Auto-Weapon Swap</b> (Automatically switch to ranged set if no target is in melee reach)"
+            );
+
+            ModSettings.EnableFighterTactics = GUILayout.Toggle(
+                ModSettings.EnableFighterTactics,
+                " <b>Enable Fighter Class Tactics</b> (Automatic use of Second Wind, Action Surge & Fighter Archetypes)"
             );
 
             ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
@@ -351,9 +363,10 @@ namespace SolastaAI
                             case 2: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
-                            case 5: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break;
-                            case 6: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
-                            case 7: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
+                            case 5: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
+                            case 6: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged)
+                            case 7: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
+                            case 8: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
                             default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
@@ -379,6 +392,48 @@ namespace SolastaAI
             catch (Exception ex)
             {
                 ModEntry.Logger.Error($"[SolastaAI] Error applying AI controller to {character?.Name}: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Executes Fighter class tactical skills (Second Wind, Action Surge) and handles archetype-specific weapon positioning.
+        /// </summary>
+        public static void ExecuteFighterTactics(GameLocationCharacter character, bool isRangedArchetype)
+        {
+            try
+            {
+                if (!ModSettings.EnableFighterTactics || character == null || character.RulesetCharacter == null) return;
+                
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null) return;
+
+                // 1. Second Wind (PowerFighterSecondWind) trigger when HP < 60%
+                int currentHp = hero.CurrentHitPoints;
+                int maxHp = currentHp + hero.MissingHitPoints;
+                if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
+                {
+                    var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && p.PowerDefinition.Name.Contains("PowerFighterSecondWind"));
+                    if (secondWindPower != null && hero.GetRemainingUsesOfPower(secondWindPower) > 0)
+                    {
+                        hero.UsePower(secondWindPower);
+                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind! (HP: {currentHp}/{maxHp})");
+                    }
+                }
+
+                // 2. Action Surge (PowerFighterActionSurge) trigger in combat
+                var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && p.PowerDefinition.Name.Contains("PowerFighterActionSurge"));
+                if (actionSurgePower != null && hero.GetRemainingUsesOfPower(actionSurgePower) > 0)
+                {
+                    hero.UsePower(actionSurgePower);
+                    ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge!");
+                }
+
+                // 3. Auto-Weapon Swap tailored to Fighter archetype
+                CheckAndAutoSwapWeapons(character);
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteFighterTactics for {character?.Name}: {ex}");
             }
         }
 
@@ -577,8 +632,16 @@ namespace SolastaAI
                 {
                     Main.ApplyAIController(__instance, choice);
 
-                    // If AI control is active, check and perform auto-weapon swap if necessary
-                    if (choice > 0)
+                    // If AI control is active, check and execute Fighter Tactics or auto-weapon swap
+                    if (choice == 5)
+                    {
+                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: false);
+                    }
+                    else if (choice == 6)
+                    {
+                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: true);
+                    }
+                    else if (choice > 0)
                     {
                         Main.CheckAndAutoSwapWeapons(__instance);
                     }
