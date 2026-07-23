@@ -1,14 +1,14 @@
-# SolastaAI - Standalone Better AI & Persistence Mod
+# SolastaAI
 
 A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
 
 ## 🌟 Key Features
 
 1. **Complete Independence & Update-Safety:**
-   - Standalone mod with **zero dependencies** on Unfinished Business or third-party mods.
+   - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
 2. **Dedicated Unity Mod Manager UI:**
-   - Configure AI settings for each party member individually right inside the UMM options panel.
+   - Configure AI settings for each party member individually right inside the UMM options panel (`SolastaAI`).
    - Choose tactical archetypes per hero:
      - `Human (Player Control)`
      - `AI: Melee (Default)`
@@ -44,7 +44,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
 
 ## 💻 Building from Source
 
-To compile `SolastaAIPersistence.dll` on Linux or Windows:
+To compile `SolastaAI.dll` on Linux or Windows:
 
 ```bash
 mcs -target:library \
@@ -55,7 +55,7 @@ mcs -target:library \
   -r:"<Solasta_Data>/Managed/UnityEngine.InputLegacyModule.dll" \
   -r:"<Solasta_Data>/Managed/UnityModManager/UnityModManager.dll" \
   -r:"<Solasta_Data>/Managed/UnityModManager/0Harmony.dll" \
-  Main.cs -out:SolastaAIPersistence.dll
+  Main.cs -out:SolastaAI.dll
 ```
 
 ---

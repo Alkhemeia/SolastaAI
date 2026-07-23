@@ -1,12 +1,12 @@
 {
-  "Id": "SolastaAIPersistence",
-  "DisplayName": "Solasta Better AI & AI Persistence",
+  "Id": "SolastaAI",
+  "DisplayName": "SolastaAI",
   "Author": "Alkhemeia",
   "Version": "2.0.0",
   "GameVersion": "1.5.97",
   "ManagerVersion": "0.24.0",
-  "AssemblyName": "SolastaAIPersistence.dll",
-  "EntryMethod": "SolastaAIPersistence.Main.Load",
-  "HomePage": "https://github.com/Alkhemeia/SolastaAIPersistence",
-  "Repository": "https://github.com/Alkhemeia/SolastaAIPersistence"
+  "AssemblyName": "SolastaAI.dll",
+  "EntryMethod": "SolastaAI.Main.Load",
+  "HomePage": "https://github.com/Alkhemeia/SolastaAI",
+  "Repository": "https://github.com/Alkhemeia/SolastaAI"
 }

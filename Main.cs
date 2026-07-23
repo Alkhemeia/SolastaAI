@@ -7,10 +7,10 @@ using HarmonyLib;
 using UnityEngine;
 using UnityModManagerNet;
 
-namespace SolastaAIPersistence
+namespace SolastaAI
 {
     /// <summary>
-    /// Configuration settings for SolastaAI persistent character AI management and tactical automation.
+    /// Configuration settings for SolastaAI character AI management and tactical automation.
     /// </summary>
     public class Settings : UnityModManager.ModSettings
     {
@@ -51,7 +51,7 @@ namespace SolastaAIPersistence
     }
 
     /// <summary>
-    /// Core entry point and static manager for SolastaAI mod.
+    /// Core entry point and static manager for SolastaAI.
     /// </summary>
     public static class Main
     {
@@ -123,7 +123,7 @@ namespace SolastaAIPersistence
         private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>SolastaAI - AI Control & Persistence Settings</b>", GUILayout.ExpandWidth(true));
+            GUILayout.Label("<b>SolastaAI Settings</b>", GUILayout.ExpandWidth(true));
             
             // Emergency Protection Toggle & Slider
             GUILayout.BeginHorizontal();
