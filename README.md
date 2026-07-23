@@ -7,8 +7,9 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
 1. **Complete Independence & Update-Safety:**
    - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
-2. **Structured Dropdown UI & Collapsible Categories:**
+2. **Structured Dropdown UI & Per-Hero Item Toggles:**
    - Convenient **Dropdown Selector** per hero e.g. `[ AI: Fighter ▼ ]`.
+   - **Individual Utensil / Item Use Toggle:** Every hero has their own dedicated toggle `[🧪 Utensilien / Items nutzen]` to enable or disable the use of utility slot items (potions, scrolls, gadgets) for that specific character's AI.
    - **Collapsible `[+]` / `[-]` Category Headers:** Expand or collapse sub-categories to keep the UI clean and readable.
    - Archetypes available per hero:
      - `Human (Player)`

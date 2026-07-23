@@ -86,8 +86,16 @@ namespace SolastaAI
         public static string CurrentTurnCharacterName = "";
 
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        public static Dictionary<string, bool> CharacterGadgetItemChoices = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, bool> DropdownOpenStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, bool> CategoryFoldStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        public static bool IsGadgetItemEnabledForAI(string characterName)
+        {
+            if (string.IsNullOrEmpty(characterName)) return true;
+            if (CharacterGadgetItemChoices.TryGetValue(characterName, out bool enabled)) return enabled;
+            return true;
+        }
 
         // Mode constants
         public const int MODE_HUMAN         = 0;
@@ -317,8 +325,16 @@ namespace SolastaAI
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(180));
                     bool isOpen = DropdownOpenStates.TryGetValue(name, out bool open) && open;
-                    if (GUILayout.Button($"<b>{currentArchetypeName}</b> ▼", GUILayout.Width(260)))
+                    if (GUILayout.Button($"<b>{currentArchetypeName}</b> ▼", GUILayout.Width(240)))
                         DropdownOpenStates[name] = !isOpen;
+
+                    bool gadgetEnabled = IsGadgetItemEnabledForAI(name);
+                    bool newGadgetEnabled = GUILayout.Toggle(gadgetEnabled, "<b>🧪 Utensilien / Items nutzen</b>", GUILayout.Width(220));
+                    if (newGadgetEnabled != gadgetEnabled)
+                    {
+                        CharacterGadgetItemChoices[name] = newGadgetEnabled;
+                        SaveChoices();
+                    }
                     GUILayout.EndHorizontal();
 
                     if (isOpen)
@@ -835,6 +851,7 @@ namespace SolastaAI
                 if (!File.Exists(SaveFilePath)) return;
                 string json = File.ReadAllText(SaveFilePath).Trim('{', '}', ' ', '\r', '\n');
                 CharacterAIChoices.Clear();
+                CharacterGadgetItemChoices.Clear();
                 if (string.IsNullOrEmpty(json)) return;
                 foreach (var pair in json.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -842,7 +859,16 @@ namespace SolastaAI
                     if (kv.Length == 2)
                     {
                         string n = kv[0].Trim(' ', '"', '\r', '\n');
-                        if (int.TryParse(kv[1].Trim(' ', '"', '\r', '\n'), out int c)) CharacterAIChoices[n] = c;
+                        string val = kv[1].Trim(' ', '"', '\r', '\n');
+                        if (n.EndsWith("_gadget_items", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string charName = n.Substring(0, n.Length - "_gadget_items".Length);
+                            if (bool.TryParse(val, out bool b)) CharacterGadgetItemChoices[charName] = b;
+                        }
+                        else if (int.TryParse(val, out int c))
+                        {
+                            CharacterAIChoices[n] = c;
+                        }
                     }
                 }
             }
@@ -855,6 +881,7 @@ namespace SolastaAI
             {
                 var entries = new List<string>();
                 foreach (var kvp in CharacterAIChoices) entries.Add($"  \"{kvp.Key}\": {kvp.Value}");
+                foreach (var kvp in CharacterGadgetItemChoices) entries.Add($"  \"{kvp.Key}_gadget_items\": {(kvp.Value ? "true" : "false")}");
                 File.WriteAllText(SaveFilePath, "{\n" + string.Join(",\n", entries.ToArray()) + "\n}");
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] SaveChoices: {ex}"); }
@@ -1180,9 +1207,21 @@ namespace SolastaAI
                     }
                 }
 
-                // Check ActionDefinition parameters
+                // Check UseItem action (Utensils / Gadgets / Potions / Scrolls)
                 if (actionParams.ActionDefinition != null)
                 {
+                    var actId = actionParams.ActionDefinition.Id;
+                    if (actId == ActionDefinitions.Id.UseItemMain || actId == ActionDefinitions.Id.UseItemBonus)
+                    {
+                        string charName = actionParams.ActingCharacter.Name;
+                        string rulesetName = actionParams.ActingCharacter.RulesetCharacter?.Name;
+                        if (!Main.IsGadgetItemEnabledForAI(charName) || (!string.IsNullOrEmpty(rulesetName) && !Main.IsGadgetItemEnabledForAI(rulesetName)))
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED UseItem ({actId}) for {charName} / {rulesetName} (Utensil/Item use disabled)");
+                            return false;
+                        }
+                    }
+
                     if (actionParams.ActionDefinition.ActivatedPower != null)
                     {
                         string pName = actionParams.ActionDefinition.ActivatedPower.Name;
