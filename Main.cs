@@ -40,7 +40,7 @@ namespace SolastaAI
         public bool EnableAutoWeaponSwap = true;
 
         /// <summary>
-        /// Enables Fighter class skill automation (Second Wind, Action Surge).
+        /// Enables Fighter class skill automation (Second Wind / Durchschnaufen, Action Surge / Tatendrank).
         /// </summary>
         public bool EnableFighterTactics = true;
 
@@ -157,7 +157,7 @@ namespace SolastaAI
 
             ModSettings.EnableFighterTactics = GUILayout.Toggle(
                 ModSettings.EnableFighterTactics,
-                " <b>Enable Fighter Class Tactics</b> (Automatic use of Second Wind, Action Surge & Fighter Archetypes)"
+                " <b>Enable Fighter Class Tactics</b> (Automatic use of Second Wind / Durchschnaufen, Action Surge / Tatendrank & Fighter Archetypes)"
             );
 
             ModSettings.EnableHotkeyToggle = GUILayout.Toggle(
@@ -396,7 +396,7 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Executes Fighter class tactical skills (Second Wind, Action Surge) and handles archetype-specific weapon positioning.
+        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank) and handles archetype-specific weapon positioning.
         /// </summary>
         public static void ExecuteFighterTactics(GameLocationCharacter character, bool isRangedArchetype)
         {
@@ -405,27 +405,34 @@ namespace SolastaAI
                 if (!ModSettings.EnableFighterTactics || character == null || character.RulesetCharacter == null) return;
                 
                 var hero = character.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null) return;
+                if (hero == null || hero.UsablePowers == null) return;
 
-                // 1. Second Wind (PowerFighterSecondWind) trigger when HP < 60%
+                // 1. Second Wind / Durchschnaufen (PowerFighterSecondWind) trigger when HP < 60%
                 int currentHp = hero.CurrentHitPoints;
                 int maxHp = currentHp + hero.MissingHitPoints;
                 if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
                 {
-                    var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && p.PowerDefinition.Name.Contains("PowerFighterSecondWind"));
+                    var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                        (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         p.PowerDefinition.Name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
+
                     if (secondWindPower != null && hero.GetRemainingUsesOfPower(secondWindPower) > 0)
                     {
                         hero.UsePower(secondWindPower);
-                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind! (HP: {currentHp}/{maxHp})");
+                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind / Durchschnaufen! (HP: {currentHp}/{maxHp})");
                     }
                 }
 
-                // 2. Action Surge (PowerFighterActionSurge) trigger in combat
-                var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && p.PowerDefinition.Name.Contains("PowerFighterActionSurge"));
+                // 2. Action Surge / Tatendrank (PowerFighterActionSurge) trigger in combat
+                var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                    (p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     p.PowerDefinition.Name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0));
+
                 if (actionSurgePower != null && hero.GetRemainingUsesOfPower(actionSurgePower) > 0)
                 {
                     hero.UsePower(actionSurgePower);
-                    ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge!");
+                    ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge / Tatendrank!");
                 }
 
                 // 3. Auto-Weapon Swap tailored to Fighter archetype
