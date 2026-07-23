@@ -4,110 +4,224 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using HarmonyLib;
+using UnityEngine;
 using UnityModManagerNet;
 
 namespace SolastaAIPersistence
 {
+    public class Settings : UnityModManager.ModSettings
+    {
+        public bool EnableEmergencyLowHpFallback = true;
+        public float EmergencyHpThresholdPercent = 30f;
+        public bool EnableHotkeyToggle = true;
+        public KeyCode ToggleHotkey = KeyCode.N;
+        public bool AutoControlGuests = false;
+
+        public override void Save(UnityModManager.ModEntry modEntry)
+        {
+            Save(this, modEntry);
+        }
+    }
+
     public static class Main
     {
         public static UnityModManager.ModEntry ModEntry { get; private set; }
+        public static Settings ModSettings { get; private set; }
         public static string SaveFilePath { get; private set; }
-        public static Dictionary<string, int> SavedAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        
+        // Character Name -> AI Choice Index (0 = Human/Player, 1 = Melee, 2 = Range, 3 = Caster, 4 = Cleric, 5 = Fighter, 6 = Mage, 7 = Rogue)
+        public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        public static Type PCCType;
-        public static FieldInfo ControllersChoicesField;
-        public static MethodInfo UpdatePartyControllerIdsMethod;
-        public static Harmony HarmonyInstance;
-        public static bool PatchedUB = false;
+        public static readonly string[] AIPackageNames = new string[]
+        {
+            "Human (Player)",
+            "AI: Melee (Default)",
+            "AI: Range (Backup Melee)",
+            "AI: Caster (Backup Attacks)",
+            "AI: Cleric Combat",
+            "AI: Fighter Combat",
+            "AI: Mage Combat",
+            "AI: Rogue Combat"
+        };
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             try
             {
                 ModEntry = modEntry;
-                ModEntry.Logger.Log("[SolastaAIPersistence] Initializing Mod...");
-
+                ModSettings = UnityModManager.ModSettings.Load<Settings>(modEntry);
                 SaveFilePath = Path.Combine(modEntry.Path, "SavedAIControllers.json");
+
                 LoadSavedChoices();
 
-                HarmonyInstance = new Harmony(modEntry.Info.Id);
+                modEntry.OnGUI = OnGUI;
+                modEntry.OnSaveGUI = OnSaveGUI;
+                modEntry.OnUpdate = OnUpdate;
 
-                // Patch GameManager.BindPostDatabase to defer UB patching until Solasta databases are ready
-                var bindPostDbMethod = AccessTools.Method(typeof(GameManager), "BindPostDatabase");
-                if (bindPostDbMethod != null)
-                {
-                    var postfix = AccessTools.Method(typeof(GameManager_BindPostDatabase_Patch), nameof(GameManager_BindPostDatabase_Patch.Postfix));
-                    HarmonyInstance.Patch(bindPostDbMethod, postfix: new HarmonyMethod(postfix));
-                    ModEntry.Logger.Log("[SolastaAIPersistence] Patched GameManager.BindPostDatabase to defer initialization.");
-                }
+                var harmony = new Harmony(modEntry.Info.Id);
+                harmony.PatchAll(Assembly.GetExecutingAssembly());
 
-                // Patch GameLocationCharacter.StartBattleTurn
-                var startBattleTurnMethod = AccessTools.Method(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn));
-                if (startBattleTurnMethod != null)
-                {
-                    var postfix = AccessTools.Method(typeof(GameLocationCharacter_StartBattleTurn_Patch), nameof(GameLocationCharacter_StartBattleTurn_Patch.Postfix));
-                    HarmonyInstance.Patch(startBattleTurnMethod, postfix: new HarmonyMethod(postfix));
-                    ModEntry.Logger.Log("[SolastaAIPersistence] Patched GameLocationCharacter.StartBattleTurn.");
-                }
-
-                ModEntry.Logger.Log("[SolastaAIPersistence] Mod loaded successfully!");
+                modEntry.Logger.Log("[SolastaAI] Standalone Mod loaded successfully!");
                 return true;
             }
             catch (Exception ex)
             {
-                modEntry?.Logger.Error($"[SolastaAIPersistence] Error in Load: {ex}");
+                modEntry?.Logger.Error($"[SolastaAI] Critical Error during Load: {ex}");
                 return true;
             }
         }
 
-        public static void TryPatchUB()
+        private static void OnGUI(UnityModManager.ModEntry modEntry)
         {
-            if (PatchedUB) return;
+            GUILayout.BeginVertical("box");
+            GUILayout.Label("<b>Solasta AI & AI Persistence Settings</b>", GUILayout.ExpandWidth(true));
+            
+            ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(ModSettings.EnableEmergencyLowHpFallback, " Enable Emergency Revert to Human Control on Low HP (< 30%)");
+            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(ModSettings.EnableHotkeyToggle, " Enable In-Combat Hotkey ('N') to Toggle Active Hero AI");
+            ModSettings.AutoControlGuests = GUILayout.Toggle(ModSettings.AutoControlGuests, " Automatically Enable AI for Guest Characters");
+            
+            GUILayout.Space(10);
+            GUILayout.Label("<b>Active Party Character AI Controls:</b>");
+
+            var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
+            if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
+            {
+                foreach (var character in charService.PartyCharacters)
+                {
+                    if (character == null) continue;
+                    string name = character.Name;
+                    if (string.IsNullOrEmpty(name)) continue;
+
+                    if (!CharacterAIChoices.TryGetValue(name, out int currentChoice))
+                    {
+                        currentChoice = 0; // Default Human
+                    }
+
+                    GUILayout.BeginHorizontal("box");
+                    string displayName = character.RulesetCharacter != null ? character.RulesetCharacter.Name : name;
+                    GUILayout.Label($"<b>{displayName}</b>", GUILayout.Width(200));
+                    
+                    int newChoice = GUILayout.SelectionGrid(currentChoice, AIPackageNames, 4, GUILayout.ExpandWidth(true));
+                    if (newChoice != currentChoice)
+                    {
+                        CharacterAIChoices[name] = newChoice;
+                        ApplyAIController(character, newChoice);
+                        SaveChoices();
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            }
+            else
+            {
+                GUILayout.Label("<i>(No active party loaded in-game. Start or load a campaign session to configure active heroes.)</i>");
+            }
+
+            GUILayout.EndVertical();
+        }
+
+        private static void OnSaveGUI(UnityModManager.ModEntry modEntry)
+        {
+            ModSettings.Save(modEntry);
+            SaveChoices();
+        }
+
+        private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
+        {
+            if (!ModSettings.EnableHotkeyToggle) return;
+
+            if (Input.GetKeyDown(ModSettings.ToggleHotkey))
+            {
+                ToggleActiveCharacterAI();
+            }
+        }
+
+        public static void ToggleActiveCharacterAI()
+        {
             try
             {
-                if (PCCType == null)
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService != null && battleService.IsBattleInProgress)
                 {
-                    PCCType = AccessTools.TypeByName("SolastaUnfinishedBusiness.Models.PlayerControllerContext");
-                    if (PCCType == null)
+                    var activeBattle = battleService.Battle;
+                    var activeContender = activeBattle?.ActiveContender;
+                    if (activeContender != null)
                     {
-                        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                        string name = activeContender.Name;
+                        if (!string.IsNullOrEmpty(name))
                         {
-                            if (asm.GetName().Name == "SolastaUnfinishedBusiness")
+                            if (!CharacterAIChoices.TryGetValue(name, out int currentChoice))
                             {
-                                PCCType = asm.GetType("SolastaUnfinishedBusiness.Models.PlayerControllerContext");
-                                if (PCCType != null) break;
+                                currentChoice = 0;
                             }
+
+                            int newChoice = (currentChoice == 0) ? 1 : 0;
+                            CharacterAIChoices[name] = newChoice;
+                            ApplyAIController(activeContender, newChoice);
+                            SaveChoices();
+
+                            string modeStr = newChoice > 0 ? "AI CONTROL" : "HUMAN CONTROL";
+                            ModEntry.Logger.Log($"[SolastaAI] Hotkey 'N' pressed: {name} set to {modeStr}");
                         }
                     }
-                }
-
-                if (PCCType != null)
-                {
-                    ControllersChoicesField = AccessTools.Field(PCCType, "ControllersChoices");
-                    UpdatePartyControllerIdsMethod = AccessTools.Method(PCCType, "UpdatePartyControllerIds", new Type[] { typeof(bool) });
-
-                    var refreshGuiStateMethod = AccessTools.Method(PCCType, "RefreshGuiState");
-                    if (refreshGuiStateMethod != null)
-                    {
-                        var prefix = AccessTools.Method(typeof(PlayerControllerContext_RefreshGuiState_Patch), nameof(PlayerControllerContext_RefreshGuiState_Patch.Prefix));
-                        var postfix = AccessTools.Method(typeof(PlayerControllerContext_RefreshGuiState_Patch), nameof(PlayerControllerContext_RefreshGuiState_Patch.Postfix));
-                        HarmonyInstance.Patch(refreshGuiStateMethod, prefix: new HarmonyMethod(prefix), postfix: new HarmonyMethod(postfix));
-                        ModEntry?.Logger.Log("[SolastaAIPersistence] Patched PlayerControllerContext.RefreshGuiState successfully (Prefix & Postfix).");
-                    }
-
-                    if (UpdatePartyControllerIdsMethod != null)
-                    {
-                        var postfix = AccessTools.Method(typeof(PlayerControllerContext_UpdatePartyControllerIds_Patch), nameof(PlayerControllerContext_UpdatePartyControllerIds_Patch.Postfix));
-                        HarmonyInstance.Patch(UpdatePartyControllerIdsMethod, postfix: new HarmonyMethod(postfix));
-                        ModEntry?.Logger.Log("[SolastaAIPersistence] Patched PlayerControllerContext.UpdatePartyControllerIds successfully.");
-                    }
-
-                    PatchedUB = true;
                 }
             }
             catch (Exception ex)
             {
-                ModEntry?.Logger.Error($"[SolastaAIPersistence] Error patching UB: {ex}");
+                ModEntry.Logger.Error($"[SolastaAI] Error handling Hotkey toggle: {ex}");
+            }
+        }
+
+        public static void ApplyAIController(GameLocationCharacter character, int choice)
+        {
+            if (character == null) return;
+            try
+            {
+                if (choice <= 0)
+                {
+                    character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
+                }
+                else
+                {
+                    character.ControllerId = PlayerControllerManager.DmControllerId;
+
+                    var decisionPackageDb = DatabaseRepository.GetDatabase<TA.AI.DecisionPackageDefinition>();
+                    if (decisionPackageDb != null)
+                    {
+                        TA.AI.DecisionPackageDefinition package = null;
+                        switch (choice)
+                        {
+                            case 1: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
+                            case 2: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
+                            case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
+                            case 5: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break;
+                            case 6: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
+                            case 7: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
+                            default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
+                        }
+
+                        if (package != null)
+                        {
+                            if (character.BehaviourPackage == null)
+                            {
+                                var newPkg = new GameLocationBehaviourPackage();
+                                newPkg.BattleStartBehavior = GameLocationBehaviourPackage.BattleStartBehaviorType.RaisesAlarm;
+                                character.BehaviourPackage = newPkg;
+                            }
+                            character.BehaviourPackage.DecisionPackageDefinition = package;
+                        }
+                    }
+                }
+
+                var activePlayerController = Gui.ActivePlayerController;
+                if (activePlayerController != null)
+                {
+                    activePlayerController.DirtyControlledCharacters();
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry.Logger.Error($"[SolastaAI] Error applying AI controller to {character?.Name}: {ex}");
             }
         }
 
@@ -118,7 +232,7 @@ namespace SolastaAIPersistence
                 if (File.Exists(SaveFilePath))
                 {
                     string json = File.ReadAllText(SaveFilePath);
-                    SavedAIChoices.Clear();
+                    CharacterAIChoices.Clear();
                     
                     json = json.Trim('{', '}', ' ', '\r', '\n');
                     if (!string.IsNullOrEmpty(json))
@@ -132,8 +246,7 @@ namespace SolastaAIPersistence
                                 string name = kv[0].Trim(' ', '"', '\r', '\n');
                                 if (int.TryParse(kv[1].Trim(' ', '"', '\r', '\n'), out int choice))
                                 {
-                                    SavedAIChoices[name] = choice;
-                                    ModEntry?.Logger.Log($"[SolastaAIPersistence] Loaded saved AI choice: {name} => {choice}");
+                                    CharacterAIChoices[name] = choice;
                                 }
                             }
                         }
@@ -142,7 +255,7 @@ namespace SolastaAIPersistence
             }
             catch (Exception ex)
             {
-                ModEntry?.Logger.Error($"[SolastaAIPersistence] Error loading saved AI choices: {ex}");
+                ModEntry?.Logger.Error($"[SolastaAI] Error loading saved choices: {ex}");
             }
         }
 
@@ -151,171 +264,21 @@ namespace SolastaAIPersistence
             try
             {
                 List<string> entries = new List<string>();
-                foreach (var kvp in SavedAIChoices)
+                foreach (var kvp in CharacterAIChoices)
                 {
                     entries.Add($"  \"{kvp.Key}\": {kvp.Value}");
                 }
                 string json = "{\n" + string.Join(",\n", entries.ToArray()) + "\n}";
                 File.WriteAllText(SaveFilePath, json);
-                ModEntry?.Logger.Log("[SolastaAIPersistence] Saved AI choices successfully.");
             }
             catch (Exception ex)
             {
-                ModEntry?.Logger.Error($"[SolastaAIPersistence] Error saving AI choices: {ex}");
-            }
-        }
-
-        public static IDictionary GetControllersChoicesDict()
-        {
-            try
-            {
-                if (ControllersChoicesField == null && PCCType != null)
-                {
-                    ControllersChoicesField = AccessTools.Field(PCCType, "ControllersChoices");
-                }
-                return ControllersChoicesField?.GetValue(null) as IDictionary;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public static void InvokeUpdatePartyControllerIds(bool sideFlipped = false)
-        {
-            try
-            {
-                if (UpdatePartyControllerIdsMethod == null && PCCType != null)
-                {
-                    UpdatePartyControllerIdsMethod = AccessTools.Method(PCCType, "UpdatePartyControllerIds", new Type[] { typeof(bool) });
-                }
-                UpdatePartyControllerIdsMethod?.Invoke(null, new object[] { sideFlipped });
-            }
-            catch {}
-        }
-    }
-
-    public static class GameManager_BindPostDatabase_Patch
-    {
-        public static void Postfix()
-        {
-            try
-            {
-                Main.TryPatchUB();
-            }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAIPersistence] Error in BindPostDatabase Postfix: {ex}");
+                ModEntry?.Logger.Error($"[SolastaAI] Error saving choices: {ex}");
             }
         }
     }
 
-    public static class PlayerControllerContext_RefreshGuiState_Patch
-    {
-        public static bool Prefix()
-        {
-            try
-            {
-                var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                if (charService == null)
-                {
-                    return false; // Skip RefreshGuiState safely outside active game sessions
-                }
-            }
-            catch
-            {
-                return false;
-            }
-            return true;
-        }
-
-        public static void Postfix()
-        {
-            try
-            {
-                var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                if (charService == null) return;
-
-                var dict = Main.GetControllersChoicesDict();
-                if (dict == null || dict.Count == 0) return;
-
-                bool updatedAny = false;
-                var keysList = new List<object>();
-                foreach (var k in dict.Keys) keysList.Add(k);
-
-                foreach (var characterObj in keysList)
-                {
-                    if (characterObj == null) continue;
-                    
-                    var nameProp = characterObj.GetType().GetProperty("Name");
-                    string name = nameProp?.GetValue(characterObj, null) as string;
-
-                    if (!string.IsNullOrEmpty(name) && Main.SavedAIChoices.TryGetValue(name, out int savedChoice))
-                    {
-                        int currentVal = Convert.ToInt32(dict[characterObj]);
-                        if (currentVal != savedChoice)
-                        {
-                            dict[characterObj] = savedChoice;
-                            updatedAny = true;
-                            Main.ModEntry?.Logger.Log($"[SolastaAIPersistence] Applied persistent choice for {name} => {savedChoice}");
-                        }
-                    }
-                }
-
-                if (updatedAny)
-                {
-                    Main.InvokeUpdatePartyControllerIds(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAIPersistence] Error in RefreshGuiState Postfix: {ex}");
-            }
-        }
-    }
-
-    public static class PlayerControllerContext_UpdatePartyControllerIds_Patch
-    {
-        public static void Postfix()
-        {
-            try
-            {
-                var dict = Main.GetControllersChoicesDict();
-                if (dict == null) return;
-
-                bool changed = false;
-                foreach (DictionaryEntry entry in dict)
-                {
-                    var characterObj = entry.Key;
-                    int choice = Convert.ToInt32(entry.Value);
-                    if (characterObj == null) continue;
-
-                    var nameProp = characterObj.GetType().GetProperty("Name");
-                    string name = nameProp?.GetValue(characterObj, null) as string;
-
-                    if (!string.IsNullOrEmpty(name))
-                    {
-                        if (!Main.SavedAIChoices.TryGetValue(name, out int current) || current != choice)
-                        {
-                            Main.SavedAIChoices[name] = choice;
-                            changed = true;
-                            Main.ModEntry?.Logger.Log($"[SolastaAIPersistence] Saved choice updated for {name} => {choice}");
-                        }
-                    }
-                }
-
-                if (changed)
-                {
-                    Main.SaveChoices();
-                }
-            }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAIPersistence] Error in UpdatePartyControllerIds Postfix: {ex}");
-            }
-        }
-    }
-
+    [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
     public static class GameLocationCharacter_StartBattleTurn_Patch
     {
         public static void Postfix(GameLocationCharacter __instance)
@@ -324,19 +287,64 @@ namespace SolastaAIPersistence
             {
                 if (__instance == null) return;
                 string name = __instance.Name;
-                if (!string.IsNullOrEmpty(name) && Main.SavedAIChoices.TryGetValue(name, out int savedChoice) && savedChoice > 0)
+                if (string.IsNullOrEmpty(name)) return;
+
+                // Check Emergency Low HP Fallback
+                if (Main.ModSettings.EnableEmergencyLowHpFallback && __instance.RulesetCharacter != null)
                 {
-                    var dict = Main.GetControllersChoicesDict();
-                    if (dict != null && dict.Contains(__instance))
+                    int currentHp = __instance.RulesetCharacter.CurrentHitPoints;
+                    int maxHp = currentHp + __instance.RulesetCharacter.MissingHitPoints;
+                    if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
                     {
-                        dict[__instance] = savedChoice;
+                        Main.ModEntry?.Logger.Log($"[SolastaAI] Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Switching to Human Control!");
+                        Main.ApplyAIController(__instance, 0);
+                        return;
                     }
-                    Main.InvokeUpdatePartyControllerIds(false);
+                }
+
+                // Apply saved choice
+                if (Main.CharacterAIChoices.TryGetValue(name, out int choice))
+                {
+                    Main.ApplyAIController(__instance, choice);
                 }
             }
             catch (Exception ex)
             {
-                Main.ModEntry?.Logger.Error($"[SolastaAIPersistence] Error in StartBattleTurn Postfix: {ex}");
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in StartBattleTurn Postfix: {ex}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.DamageSustained))]
+    public static class GameLocationCharacter_DamageSustained_Patch
+    {
+        public static void Postfix(GameLocationCharacter __instance)
+        {
+            try
+            {
+                if (__instance == null || !Main.ModSettings.EnableEmergencyLowHpFallback) return;
+                string name = __instance.Name;
+                if (string.IsNullOrEmpty(name)) return;
+
+                if (Main.CharacterAIChoices.TryGetValue(name, out int choice) && choice > 0)
+                {
+                    if (__instance.RulesetCharacter != null)
+                    {
+                        int currentHp = __instance.RulesetCharacter.CurrentHitPoints;
+                        int maxHp = currentHp + __instance.RulesetCharacter.MissingHitPoints;
+                        if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < Main.ModSettings.EmergencyHpThresholdPercent)
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] Damage Sustained! Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Reverting to Human Control!");
+                            Main.CharacterAIChoices[name] = 0; // Revert choice
+                            Main.ApplyAIController(__instance, 0);
+                            Main.SaveChoices();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in DamageSustained Postfix: {ex}");
             }
         }
     }
