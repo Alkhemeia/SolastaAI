@@ -28,7 +28,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - **`[+]` ⚔️ Offensive Skills & Maneuvers:** `Action Surge / Tatendrank`, `Pushing Attack / Stoßangriff`, `Trip Attack / Beinstellen`, `Riposte`, `Precision Attack / Präzisionsangriff`
      - **`[+]` 🎯 Movement & Positioning:** `Avoid Opportunity Attacks` (For Ranged Fighter), `Auto-Weapon Swap`
    - **Druid Options (`AI: Druid`):**
-     - **`[+]` 🔮 Cantrips / Zaubertricks:** `Shillelagh / Zauberstock`, `Guidance / Göttliche Führung`, `Produce Flame`, `Thorn Whip`, `Poison Spray`, `Chill Touch / Kalte Hand`, `Resist Elements`
+     - **`[+]` 🔮 Cantrips / Zaubertricks:** `Shillelagh / Zauberstock`, `Guidance / Göttliche Führung`, `Produce Flame`, `Thorn Whip`, `Poison Spray / Giftiger Stachel`, `Chill Touch / Kalte Hand`, `Resist Elements`
      - **`[+]` 💚 Healing & Restoration:** `Cure Wounds`, `Healing Word`, `Lesser Restoration`, `Goodberry`, `Create Food & Water`, `Revivify`
      - **`[+]` 🛡️ Protection & Buffs:** `Protection from Poison`, `Protection from Energy`, `Barkskin`, `Darkvision`, `Longstrider`, `Pass Without Trace`, `Jump`
      - **`[+]` ⚔️ Attack & Control Spells:** `Entangle`, `Faerie Fire`, `Fog Cloud`, `Animal Friendship`, `Charm Person`, `Detect Magic`, `Detect Poison`, `Flame Blade`, `Flaming Sphere`, `Heat Metal`, `Hold Person`, `Moonbeam`, `Spike Growth`, `Call Lightning`, `Dispel Magic`, `Sleet Storm`, `Wind Wall`, `Daylight`

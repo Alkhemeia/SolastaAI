@@ -164,7 +164,7 @@ namespace SolastaAI
                 return ModSettings.EnableSpellProduceFlame;
             if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
                 return ModSettings.EnableSpellThornWhip;
-            if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Giftsprühen", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("PoisonSting", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GiftigerStachel", StringComparison.OrdinalIgnoreCase) >= 0)
                 return ModSettings.EnableSpellPoisonSpray;
             if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0)
                 return ModSettings.EnableSpellChillTouch;
@@ -348,7 +348,7 @@ namespace SolastaAI
                             ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "└─ <b>Guidance / Göttliche Führung</b>");
                             ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "└─ <b>Produce Flame / Flamme erzeugen</b>");
                             ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "└─ <b>Thorn Whip / Dornenpeitsche</b>");
-                            ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "└─ <b>Poison Spray / Giftsprühen</b>");
+                            ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "└─ <b>Poison Spray / Giftiger Stachel / Giftsprühen</b>");
                             ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "└─ <b>Chill Touch / Kalte Hand</b>");
                             ModSettings.EnableSpellResistElements = GUILayout.Toggle(ModSettings.EnableSpellResistElements, "└─ <b>Resist Elements</b>");
                         });
