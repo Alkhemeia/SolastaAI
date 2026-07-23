@@ -1,0 +1,10 @@
+{
+  "Id": "SolastaAIPersistence",
+  "DisplayName": "Solasta AI Persistence Mod",
+  "Author": "AI Assistant",
+  "Version": "1.0.0",
+  "GameVersion": "1.5.97",
+  "ManagerVersion": "0.24.0",
+  "AssemblyName": "SolastaAIPersistence.dll",
+  "EntryMethod": "SolastaAIPersistence.Main.Load"
+}
