@@ -8,7 +8,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
    - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
 2. **Structured Dropdown UI & Dynamic Mode Settings:**
-   - Convenient **Dropdown Selector** per hero e.g. `[ AI: Druid Combat ▼ ]`.
+   - Convenient **Dropdown Selector** per hero e.g. `[ AI: Druid (Shillelagh) ▼ ]`.
    - Displays **dynamic sub-settings** directly below each hero based on their chosen AI mode.
    - Archetypes available per hero:
      - `Human (Player Control)`
@@ -16,15 +16,18 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Range (Backup Melee)`
      - `AI: Caster (Backup Attacks)`
      - `AI: Cleric Combat`
-     - `AI: Druid Combat` - Focused on support/nature spellcasting and Tiergestalt (Wild Shape).
+     - `AI: Druid (Wild Shape)` - Focused on support spellcasting and Tiergestalt (Wild Shape).
+     - `AI: Druid (Shillelagh)` - Focused on melee combat with Shillelagh, self-buffing with Guidance, and optional ally healing.
      - `AI: Fighter (Melee)` - Focused on frontline melee aggression with automatic weapon swap.
      - `AI: Fighter (Ranged)` - Focused on ranged archery positioning and opportunity attack prevention.
      - `AI: Mage Combat`
      - `AI: Rogue Combat`
-3. **Druid Class Automation:**
-   - **Wild Shape / Tiergestalt:** Automatically transforms when threatened or HP drops below **75%**.
-   - **Nature & Healing Support Spells:** Uses support spellcasting package `DefaultSupportCasterWithBackupAttacksDecisions`.
-4. **Fighter Class Tactics & Skill Automation:**
+3. **Shillelagh Druid Melee Automation:**
+   - **Shillelagh / Zauberstock:** Automatically casts Shillelagh on the primary melee weapon (no Wild Shape transformation!).
+   - **Guidance / Göttliche Führung:** When out of melee reach ($> 2$ cells), casts Guidance on self while advancing towards target.
+   - **Ranged Cantrips:** Uses ranged cantrips (Produce Flame, etc.) if Guidance is absent or out of melee reach.
+   - **Toggleable Ally Healing:** Automatically heals wounded allies ($< 50\%$ HP) if healing toggle is enabled in settings.
+4. **Fighter Class Automation:**
    - **Second Wind / Durchschnaufen:** Automatically triggered when HP drops below **60%**.
    - **Action Surge / Tatendrank:** Automatically activated during combat for extra actions.
 5. **Toggleable Opportunity Attack Protection:**

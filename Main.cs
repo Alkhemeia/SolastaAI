@@ -50,6 +50,11 @@ namespace SolastaAI
         public bool EnableDruidTactics = true;
 
         /// <summary>
+        /// Enables healing support for wounded allies by Druid spellcasters.
+        /// </summary>
+        public bool EnableDruidHealing = true;
+
+        /// <summary>
         /// Enables Opportunity Attack protection for Ranged Fighters (eliminating adjacent threats in melee first).
         /// </summary>
         public bool EnableAvoidOpportunityAttacks = true;
@@ -81,11 +86,12 @@ namespace SolastaAI
         /// 2 = AI: Range (Backup Melee)
         /// 3 = AI: Caster (Backup Attacks)
         /// 4 = AI: Cleric Combat
-        /// 5 = AI: Druid Combat
-        /// 6 = AI: Fighter (Melee)
-        /// 7 = AI: Fighter (Ranged / Archer)
-        /// 8 = AI: Mage Combat
-        /// 9 = AI: Rogue Combat
+        /// 5 = AI: Druid (Wild Shape & Support)
+        /// 6 = AI: Druid (Shillelagh Melee)
+        /// 7 = AI: Fighter (Melee)
+        /// 8 = AI: Fighter (Ranged / Archer)
+        /// 9 = AI: Mage Combat
+        /// 10 = AI: Rogue Combat
         /// </summary>
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -104,7 +110,8 @@ namespace SolastaAI
             "AI: Range (Backup Melee)",
             "AI: Caster (Backup Attacks)",
             "AI: Cleric Combat",
-            "AI: Druid Combat",
+            "AI: Druid (Wild Shape)",
+            "AI: Druid (Shillelagh)",
             "AI: Fighter (Melee)",
             "AI: Fighter (Ranged)",
             "AI: Mage Combat",
@@ -235,14 +242,19 @@ namespace SolastaAI
                     }
 
                     // 3. DYNAMIC SUB-SETTINGS (Displayed below dropdown based on selected mode!)
-                    if (currentChoice == 5) // Druid Combat
+                    if (currentChoice == 5) // Druid (Wild Shape)
                     {
                         GUILayout.BeginVertical("box");
                         GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
 
                         ModSettings.EnableDruidTactics = GUILayout.Toggle(
                             ModSettings.EnableDruidTactics,
-                            "   └─ <b>Use Wild Shape & Support Automation</b> (Automatic Wild Shape / Tiergestalt & healing support)"
+                            "   └─ <b>Use Wild Shape Automation</b> (Automatic Wild Shape / Tiergestalt when threatened)"
+                        );
+
+                        ModSettings.EnableDruidHealing = GUILayout.Toggle(
+                            ModSettings.EnableDruidHealing,
+                            "   └─ <b>Enable Ally Healing Support</b> (Automatically heal wounded allies when HP < 50%)"
                         );
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
@@ -252,7 +264,29 @@ namespace SolastaAI
 
                         GUILayout.EndVertical();
                     }
-                    else if (currentChoice == 6 || currentChoice == 7) // Fighter (Melee) or Fighter (Ranged)
+                    else if (currentChoice == 6) // Druid (Shillelagh Melee)
+                    {
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+
+                        ModSettings.EnableDruidTactics = GUILayout.Toggle(
+                            ModSettings.EnableDruidTactics,
+                            "   └─ <b>Use Shillelagh Melee Tactics</b> (Cast Shillelagh on weapon & engage in melee without transforming)"
+                        );
+
+                        ModSettings.EnableDruidHealing = GUILayout.Toggle(
+                            ModSettings.EnableDruidHealing,
+                            "   └─ <b>Enable Ally Healing Support</b> (Automatically heal wounded allies when HP < 50%)"
+                        );
+
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                            ModSettings.EnableAutoWeaponSwap,
+                            "   └─ <b>Use Guidance / Ranged Cantrip when out of Melee reach</b>"
+                        );
+
+                        GUILayout.EndVertical();
+                    }
+                    else if (currentChoice == 7 || currentChoice == 8) // Fighter (Melee) or Fighter (Ranged)
                     {
                         GUILayout.BeginVertical("box");
                         GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
@@ -262,7 +296,7 @@ namespace SolastaAI
                             "   └─ <b>Use Second Wind & Action Surge</b> (Automatic heal on low HP & extra actions)"
                         );
 
-                        if (currentChoice == 7) // Fighter (Ranged)
+                        if (currentChoice == 8) // Fighter (Ranged)
                         {
                             ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
                                 ModSettings.EnableAvoidOpportunityAttacks,
@@ -456,11 +490,12 @@ namespace SolastaAI
                             case 2: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
-                            case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid Combat
-                            case 6: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
-                            case 7: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
-                            case 8: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
-                            case 9: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
+                            case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
+                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee)
+                            case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
+                            case 8: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
+                            case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
+                            case 10: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
                             default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
@@ -564,12 +599,167 @@ namespace SolastaAI
                     ModEntry?.Logger.Log($"[SolastaAI] Druid Skill: {character.Name} activated Wild Shape / Tiergestalt! (HP: {currentHp}/{maxHp})");
                 }
 
-                // 2. Auto-Weapon Swap for Druids
+                // 2. Ally Healing Check (if enabled)
+                if (ModSettings.EnableDruidHealing)
+                {
+                    CheckAndHealAllies(character);
+                }
+
+                // 3. Auto-Weapon Swap for Druids
                 CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
             }
             catch (Exception ex)
             {
                 ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteDruidTactics for {character?.Name}: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Executes Shillelagh Druid Melee tactics: casts Shillelagh, heals allies if needed, uses Guidance if out of range, or attacks in melee without transforming.
+        /// </summary>
+        public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
+        {
+            try
+            {
+                if (!ModSettings.EnableDruidTactics || character == null || character.RulesetCharacter == null) return;
+                
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null) return;
+
+                // 1. Cast Shillelagh on melee weapon if known and available
+                if (hero.SpellRepertoires != null)
+                {
+                    foreach (var repertoire in hero.SpellRepertoires)
+                    {
+                        if (repertoire == null) continue;
+                        var shillelaghSpell = repertoire.KnownCantrips.Find(s => s != null && 
+                            (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                        if (shillelaghSpell != null && repertoire.CanCastSpell(shillelaghSpell, true))
+                        {
+                            ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} casting Shillelagh / Zauberstock!");
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Ally Healing Check (if enabled)
+                if (ModSettings.EnableDruidHealing)
+                {
+                    CheckAndHealAllies(character);
+                }
+
+                // 3. Enemy Distance & Guidance / Cantrip Check
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService != null && battleService.IsBattleInProgress && battleService.Battle != null)
+                {
+                    int minDistance = int.MaxValue;
+                    var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battleService.Battle.EnemyContenders : battleService.Battle.PlayerContenders;
+                    if (enemies != null && enemies.Count > 0)
+                    {
+                        var posA = character.LocationPosition;
+                        foreach (var enemy in enemies)
+                        {
+                            if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
+                                continue;
+
+                            var posB = enemy.LocationPosition;
+                            int dx = Math.Abs(posA.x - posB.x);
+                            int dz = Math.Abs(posA.z - posB.z);
+                            int dy = Math.Abs(posA.y - posB.y);
+                            int dist = Math.Max(dx, Math.Max(dy, dz));
+
+                            if (dist < minDistance)
+                            {
+                                minDistance = dist;
+                            }
+                        }
+                    }
+
+                    // If NO enemy is in melee reach (> 2 cells):
+                    if (minDistance > 2)
+                    {
+                        bool castGuidance = false;
+                        if (hero.SpellRepertoires != null)
+                        {
+                            foreach (var repertoire in hero.SpellRepertoires)
+                            {
+                                if (repertoire == null) continue;
+                                var guidanceSpell = repertoire.KnownCantrips.Find(s => s != null && 
+                                    (s.Name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     s.Name.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     s.Name.IndexOf("GoettlicheFuehrung", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                                if (guidanceSpell != null && repertoire.CanCastSpell(guidanceSpell, true))
+                                {
+                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} out of melee range ({minDistance} cells). Casting Guidance / Göttliche Führung on self!");
+                                    castGuidance = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // If Guidance not available, equip ranged set for Ranged Cantrip / Bow
+                        if (!castGuidance)
+                        {
+                            CheckAndAutoSwapWeapons(character, isRangedArchetype: true);
+                        }
+                    }
+                    else
+                    {
+                        // Enemy IS in melee reach: equip Melee weapon set with Shillelagh!
+                        CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteShillelaghDruidTactics for {character?.Name}: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Helper to check party member health and cast healing spells if any ally has HP < 50%.
+        /// </summary>
+        public static void CheckAndHealAllies(GameLocationCharacter character)
+        {
+            try
+            {
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null || hero.SpellRepertoires == null) return;
+
+                var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
+                if (charService == null || charService.PartyCharacters == null) return;
+
+                foreach (var ally in charService.PartyCharacters)
+                {
+                    if (ally == null || ally.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
+                        continue;
+
+                    int allyHp = ally.RulesetCharacter.CurrentHitPoints;
+                    int allyMaxHp = allyHp + ally.RulesetCharacter.MissingHitPoints;
+                    if (allyMaxHp > 0 && ((float)allyHp / allyMaxHp * 100f) < 50f)
+                    {
+                        foreach (var repertoire in hero.SpellRepertoires)
+                        {
+                            if (repertoire == null) continue;
+                            var healSpell = repertoire.PreparedSpells.Find(s => s != null && 
+                                (s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                            if (healSpell != null && repertoire.CanCastSpell(healSpell, true))
+                            {
+                                ModEntry?.Logger.Log($"[SolastaAI] Druid Healing Support: {character.Name} healing ally {ally.Name} (HP: {allyHp}/{allyMaxHp})!");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndHealAllies: {ex}");
             }
         }
 
@@ -813,9 +1003,13 @@ namespace SolastaAI
                     }
                     else if (choice == 6)
                     {
-                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: false);
+                        Main.ExecuteShillelaghDruidTactics(__instance);
                     }
                     else if (choice == 7)
+                    {
+                        Main.ExecuteFighterTactics(__instance, isRangedArchetype: false);
+                    }
+                    else if (choice == 8)
                     {
                         Main.ExecuteFighterTactics(__instance, isRangedArchetype: true);
                     }
