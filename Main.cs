@@ -561,13 +561,13 @@ namespace SolastaAI
                         switch (choice)
                         {
                             case 1: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
-                            case 2: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
+                            case 2: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Range (Backup Melee): maintains distance!
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
                             case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
-                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: Melee Package forces aggressive movement towards enemies into melee reach!)
+                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: advances towards melee!)
                             case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
-                            case 8: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
+                            case 8: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Fighter (Ranged / Archer: Support Caster Package keeps distance!)
                             case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
                             case 10: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
                             default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
@@ -933,6 +933,7 @@ namespace SolastaAI
         /// <summary>
         /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
         /// Respects EnableAvoidOpportunityAttacks setting for Ranged Fighters.
+        /// Ensures Ranged Fighters stay at distance and DO NOT advance adjacent to enemies.
         /// </summary>
         public static void CheckAndAutoSwapWeapons(GameLocationCharacter character, bool isRangedArchetype = false)
         {
@@ -978,18 +979,18 @@ namespace SolastaAI
                     }
                 }
 
-                // RANGED FIGHTER TACTICAL OPPORTUNITY ATTACK PREVENTION:
+                // RANGED ARCHETYPE TACTICAL POSITIONING & SAFETY:
                 if (isRangedArchetype)
                 {
-                    // If Opportunity Attack Protection is enabled AND an enemy is in immediate melee reach (dist <= 1 cell):
-                    if (ModSettings.EnableAvoidOpportunityAttacks && minDistance <= 1)
+                    // If an enemy is in immediate melee reach (<= 2 cells):
+                    if (minDistance <= 2)
                     {
-                        if (currentlyRanged)
+                        if (ModSettings.EnableAvoidOpportunityAttacks && currentlyRanged)
                         {
                             inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                             if (!hero.IsWieldingRangedWeapon())
                             {
-                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Safety: {character.Name} threatened in melee (dist: {minDistance}). Switched to Melee Set to safely eliminate threat without provoking opportunity attacks.");
+                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Safety: {character.Name} threatened in melee ({minDistance} cells). Switched to Melee Set to safely eliminate threat without opportunity attacks.");
                             }
                             else
                             {
@@ -997,7 +998,7 @@ namespace SolastaAI
                             }
                         }
                     }
-                    // Otherwise (Safe distance or protection toggle disabled):
+                    // If enemy is at safe distance (> 2 cells):
                     else
                     {
                         if (!currentlyRanged)
@@ -1005,7 +1006,7 @@ namespace SolastaAI
                             inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                             if (hero.IsWieldingRangedWeapon())
                             {
-                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Safety: {character.Name} safe from opportunity attacks (dist: {minDistance}). Equipping Ranged Set!");
+                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Safety: {character.Name} safe from melee ({minDistance} cells). Equipping Ranged Set!");
                             }
                             else
                             {
@@ -1153,6 +1154,28 @@ namespace SolastaAI
                             __result = 0;
                             return false;
                         }
+                    }
+
+                    // Maneuvers
+                    if (name.IndexOf("Indomitable", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Unbeugsam", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterIndomitable) { __result = 0; return false; }
+                    }
+                    if (name.IndexOf("PushingAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterPushingAttack) { __result = 0; return false; }
+                    }
+                    if (name.IndexOf("TripAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterTripAttack) { __result = 0; return false; }
+                    }
+                    if (name.IndexOf("Riposte", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterRiposte) { __result = 0; return false; }
+                    }
+                    if (name.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterPrecisionAttack) { __result = 0; return false; }
                     }
                 }
             }
