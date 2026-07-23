@@ -446,7 +446,7 @@ namespace SolastaAI
 
         /// <summary>
         /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
-        /// For Ranged Fighters, prioritizes holding the ranged weapon set and staying at distance unless forced into melee without ammo.
+        /// For Ranged Fighters, prevents opportunity attacks by forcing Melee combat against adjacent threats first before retreating.
         /// </summary>
         public static void CheckAndAutoSwapWeapons(GameLocationCharacter character, bool isRangedArchetype = false)
         {
@@ -468,50 +468,72 @@ namespace SolastaAI
                 int otherConfig = (currentConfig == 0) ? 1 : 0;
                 bool currentlyRanged = hero.IsWieldingRangedWeapon();
 
-                // RANGED FIGHTER ARCHETYPE SPECIFIC LOGIC:
-                // Always prioritize holding the Ranged weapon configuration!
+                // Calculate distance to closest alive enemy contender on tactical grid
+                int minDistance = int.MaxValue;
+                var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
+                if (enemies != null && enemies.Count > 0)
+                {
+                    var posA = character.LocationPosition;
+                    foreach (var enemy in enemies)
+                    {
+                        if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
+                            continue;
+
+                        var posB = enemy.LocationPosition;
+                        int dx = Math.Abs(posA.x - posB.x);
+                        int dz = Math.Abs(posA.z - posB.z);
+                        int dy = Math.Abs(posA.y - posB.y);
+                        int dist = Math.Max(dx, Math.Max(dy, dz));
+
+                        if (dist < minDistance)
+                        {
+                            minDistance = dist;
+                        }
+                    }
+                }
+
+                // RANGED FIGHTER TACTICAL OPPORTUNITY ATTACK PREVENTION:
                 if (isRangedArchetype)
                 {
-                    if (!currentlyRanged)
+                    // 1. Immediate Melee Threat (dist <= 1 cell):
+                    //    To prevent triggering opportunity attacks, do NOT run away blindly.
+                    //    Switch to Melee weapon set to defeat/eliminate the adjacent threat first!
+                    if (minDistance <= 1)
                     {
-                        // Switch to secondary configuration to verify if it is ranged
-                        inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                        if (hero.IsWieldingRangedWeapon())
+                        if (currentlyRanged)
                         {
-                            ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Tactics: {character.Name} prioritized & equipped Ranged Weapon Set!");
+                            inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                            if (!hero.IsWieldingRangedWeapon())
+                            {
+                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Safety: {character.Name} threatened in melee (dist: {minDistance}). Switched to Melee Set to safely eliminate threat without provoking opportunity attacks.");
+                            }
+                            else
+                            {
+                                inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                            }
                         }
-                        else
+                    }
+                    // 2. Safe Distance (dist > 1 cell):
+                    //    No enemy in immediate melee range. Equip Ranged Set and unleash archery!
+                    else
+                    {
+                        if (!currentlyRanged)
                         {
-                            // Secondary set is not ranged, revert back to primary
-                            inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                            inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                            if (hero.IsWieldingRangedWeapon())
+                            {
+                                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Safety: {character.Name} safe from opportunity attacks (dist: {minDistance}). Equipping Ranged Set!");
+                            }
+                            else
+                            {
+                                inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                            }
                         }
                     }
                     return;
                 }
 
                 // GENERAL / MELEE AUTO-WEAPON SWAP LOGIC:
-                int minDistance = int.MaxValue;
-                var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
-                if (enemies == null || enemies.Count == 0) return;
-
-                var posA = character.LocationPosition;
-                foreach (var enemy in enemies)
-                {
-                    if (enemy == null || enemy.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
-                        continue;
-
-                    var posB = enemy.LocationPosition;
-                    int dx = Math.Abs(posA.x - posB.x);
-                    int dz = Math.Abs(posA.z - posB.z);
-                    int dy = Math.Abs(posA.y - posB.y);
-                    int dist = Math.Max(dx, Math.Max(dy, dz));
-
-                    if (dist < minDistance)
-                    {
-                        minDistance = dist;
-                    }
-                }
-
                 if (minDistance == int.MaxValue) return;
 
                 // If no enemy is in melee reach (> 2 cells) and currently holding Melee weapon:
