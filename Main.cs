@@ -526,10 +526,10 @@ namespace SolastaAI
     }
 
     /// <summary>
-    /// Harmony Patch on GameLocationBattleManager.EndBattle to guarantee all party members revert to Player Control after combat ends.
+    /// Harmony Patch on GameLocationBattleManager.TriggerBattleEnd to guarantee all party members revert to Player Control after combat ends.
     /// </summary>
-    [HarmonyPatch(typeof(GameLocationBattleManager), "EndBattle")]
-    public static class GameLocationBattleManager_EndBattle_Patch
+    [HarmonyPatch(typeof(GameLocationBattleManager), "TriggerBattleEnd")]
+    public static class GameLocationBattleManager_TriggerBattleEnd_Patch
     {
         public static void Postfix()
         {
@@ -540,7 +540,7 @@ namespace SolastaAI
             }
             catch (Exception ex)
             {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in EndBattle Postfix: {ex}");
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in TriggerBattleEnd Postfix: {ex}");
             }
         }
     }
