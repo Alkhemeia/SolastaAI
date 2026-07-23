@@ -1112,6 +1112,188 @@ namespace SolastaAI
     }
 
     /// <summary>
+    /// Harmony Patch on RulesetCharacter.GetRemainingUsesOfPower to intercept and enforce disabled powers in Solasta AI Engine.
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetCharacter), nameof(RulesetCharacter.GetRemainingUsesOfPower))]
+    public static class RulesetCharacter_GetRemainingUsesOfPower_Patch
+    {
+        public static bool Prefix(RulesetCharacter __instance, RulesetUsablePower usablePower, ref int __result)
+        {
+            try
+            {
+                if (usablePower != null && usablePower.PowerDefinition != null)
+                {
+                    string name = usablePower.PowerDefinition.Name;
+
+                    // Wild Shape / Tiergestalt
+                    if (name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableDruidWildShape)
+                        {
+                            __result = 0;
+                            return false;
+                        }
+                    }
+
+                    // Second Wind / Durchschnaufen
+                    if (name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterSecondWind)
+                        {
+                            __result = 0;
+                            return false;
+                        }
+                    }
+
+                    // Action Surge / Tatendrank
+                    if (name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableFighterActionSurge)
+                        {
+                            __result = 0;
+                            return false;
+                        }
+                    }
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Harmony Patch on RulesetSpellRepertoire.CanCastSpell to intercept and enforce disabled spells in Solasta AI Engine.
+    /// </summary>
+    [HarmonyPatch(typeof(RulesetSpellRepertoire), nameof(RulesetSpellRepertoire.CanCastSpell), new Type[] { typeof(SpellDefinition), typeof(bool) })]
+    public static class RulesetSpellRepertoire_CanCastSpell_Patch
+    {
+        public static bool Prefix(SpellDefinition spellDefinition, ref bool __result)
+        {
+            try
+            {
+                if (spellDefinition != null)
+                {
+                    string name = spellDefinition.Name;
+
+                    // Cantrips
+                    if (name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellShillelagh) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("GoettlicheFuehrung", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellGuidance) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellProduceFlame) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellThornWhip) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellPoisonSpray) { __result = false; return false; }
+                    }
+
+                    // 1st Level
+                    if (name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellCureWounds) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellHealingWord) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellEntangle) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellFaerieFire) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellFogCloud) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellGoodberry) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellJump) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellLongstrider) { __result = false; return false; }
+                    }
+
+                    // 2nd Level
+                    if (name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellProtectionFromPoison) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellBarkskin) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellFlamingSphere) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellHoldPerson) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellLesserRestoration) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellMoonbeam) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellSpikeGrowth) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellPassWithoutTrace) { __result = false; return false; }
+                    }
+
+                    // 3rd Level+
+                    if (name.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellCallLightning) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellDispelMagic) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellSleetStorm) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellWindWall) { __result = false; return false; }
+                    }
+                    if (name.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (!Main.ModSettings.EnableSpellDaylight) { __result = false; return false; }
+                    }
+                }
+            }
+            catch {}
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Harmony Patch on GameLocationBattleManager.TriggerBattleEnd to guarantee all party members revert to Player Control after combat ends.
     /// </summary>
     [HarmonyPatch(typeof(GameLocationBattleManager), "TriggerBattleEnd")]
