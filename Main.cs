@@ -565,7 +565,7 @@ namespace SolastaAI
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
                             case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
-                            case 6: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Shillelagh Melee)
+                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: Melee Package forces aggressive movement towards enemies into melee reach!)
                             case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
                             case 8: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
                             case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
