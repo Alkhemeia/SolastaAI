@@ -86,6 +86,7 @@ namespace SolastaAI
 
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, bool> DropdownOpenStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private static Dictionary<string, bool> CategoryFoldStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
         // Mode constants
         public const int MODE_HUMAN         = 0;
@@ -391,60 +392,68 @@ namespace SolastaAI
                         GUILayout.BeginVertical("box");
                         GUILayout.Label($"<i>✨ Druid Spell & Ability Controls for {displayName}:</i>");
 
-                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, "   └─ <b>Wild Shape / Tiergestalt</b>");
+                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, " <b>Wild Shape / Tiergestalt</b>");
 
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>🔮 Cantrips / Zaubertricks:</b>");
-                        ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "     └─ <b>Shillelagh / Zauberstock</b>");
-                        ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "     └─ <b>Guidance / Göttliche Führung</b>");
-                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame / Flamme erzeugen</b>");
-                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip / Dornenpeitsche</b>");
-                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray / Giftsprühen</b>");
-                        ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "     └─ <b>Chill Touch / Kalte Hand</b>");
-                        ModSettings.EnableSpellResistElements = GUILayout.Toggle(ModSettings.EnableSpellResistElements, "     └─ <b>Resist Elements</b>");
+
+                        string dPrefix = $"{name}_druid_";
+
+                        DrawCategoryHeader(dPrefix + "cantrips", "<b>🔮 Cantrips / Zaubertricks</b>", () =>
+                        {
+                            ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "└─ <b>Shillelagh / Zauberstock</b>");
+                            ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "└─ <b>Guidance / Göttliche Führung</b>");
+                            ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "└─ <b>Produce Flame / Flamme erzeugen</b>");
+                            ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "└─ <b>Thorn Whip / Dornenpeitsche</b>");
+                            ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "└─ <b>Poison Spray / Giftsprühen</b>");
+                            ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "└─ <b>Chill Touch / Kalte Hand</b>");
+                            ModSettings.EnableSpellResistElements = GUILayout.Toggle(ModSettings.EnableSpellResistElements, "└─ <b>Resist Elements</b>");
+                        });
+
+                        DrawCategoryHeader(dPrefix + "healing", "<b>💚 Healing & Restoration</b>", () =>
+                        {
+                            ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "└─ <b>Cure Wounds / Wunden heilen</b>");
+                            ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "└─ <b>Healing Word / Wort der Heilung</b>");
+                            ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "└─ <b>Lesser Restoration / Teilw. Genesung</b>");
+                            ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "└─ <b>Goodberry / Gute Beere</b>");
+                            ModSettings.EnableSpellCreateFoodAndWater = GUILayout.Toggle(ModSettings.EnableSpellCreateFoodAndWater, "└─ <b>Create Food & Water / Nahrung erschaffen</b>");
+                            ModSettings.EnableSpellRevivify = GUILayout.Toggle(ModSettings.EnableSpellRevivify, "└─ <b>Revivify / Wiederbeleben</b>");
+                        });
+
+                        DrawCategoryHeader(dPrefix + "protection", "<b>🛡️ Protection & Buffs</b>", () =>
+                        {
+                            ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "└─ <b>Protection from Poison / Schutz vor Gift</b>");
+                            ModSettings.EnableSpellProtectionFromEnergy = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromEnergy, "└─ <b>Protection from Energy / Schutz vor Energie</b>");
+                            ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "└─ <b>Barkskin / Rindenhaut</b>");
+                            ModSettings.EnableSpellDarkvision = GUILayout.Toggle(ModSettings.EnableSpellDarkvision, "└─ <b>Darkvision / Dunkelsicht</b>");
+                            ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "└─ <b>Longstrider / Langschritt</b>");
+                            ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "└─ <b>Pass Without Trace / Spurlos verbergen</b>");
+                            ModSettings.EnableSpellJump = GUILayout.Toggle(ModSettings.EnableSpellJump, "└─ <b>Jump / Springen</b>");
+                        });
+
+                        DrawCategoryHeader(dPrefix + "attack", "<b>⚔️ Attack & Control Spells</b>", () =>
+                        {
+                            ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "└─ <b>Entangle / Verstricken</b>");
+                            ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "└─ <b>Faerie Fire / Feenfeuer</b>");
+                            ModSettings.EnableSpellFogCloud = GUILayout.Toggle(ModSettings.EnableSpellFogCloud, "└─ <b>Fog Cloud / Nebelwolke</b>");
+                            ModSettings.EnableSpellAnimalFriendship = GUILayout.Toggle(ModSettings.EnableSpellAnimalFriendship, "└─ <b>Animal Friendship / Tierfreundschaft</b>");
+                            ModSettings.EnableSpellCharmPerson = GUILayout.Toggle(ModSettings.EnableSpellCharmPerson, "└─ <b>Charm Person / Person bezaubern</b>");
+                            ModSettings.EnableSpellDetectMagic = GUILayout.Toggle(ModSettings.EnableSpellDetectMagic, "└─ <b>Detect Magic / Magie entdecken</b>");
+                            ModSettings.EnableSpellDetectPoisonAndDisease = GUILayout.Toggle(ModSettings.EnableSpellDetectPoisonAndDisease, "└─ <b>Detect Poison / Gift entdecken</b>");
+                            ModSettings.EnableSpellFlameBlade = GUILayout.Toggle(ModSettings.EnableSpellFlameBlade, "└─ <b>Flame Blade / Flammenklinge</b>");
+                            ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "└─ <b>Flaming Sphere / Flammenkugel</b>");
+                            ModSettings.EnableSpellHeatMetal = GUILayout.Toggle(ModSettings.EnableSpellHeatMetal, "└─ <b>Heat Metal / Metall erhitzen</b>");
+                            ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "└─ <b>Hold Person / Person festhalten</b>");
+                            ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "└─ <b>Moonbeam / Mondstrahl</b>");
+                            ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "└─ <b>Spike Growth / Dornenwuchs</b>");
+                            ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "└─ <b>Call Lightning / Blitzschlag rufen</b>");
+                            ModSettings.EnableSpellDispelMagic = GUILayout.Toggle(ModSettings.EnableSpellDispelMagic, "└─ <b>Dispel Magic / Magie bannen</b>");
+                            ModSettings.EnableSpellSleetStorm = GUILayout.Toggle(ModSettings.EnableSpellSleetStorm, "└─ <b>SleetStorm / Graupelschauer</b>");
+                            ModSettings.EnableSpellWindWall = GUILayout.Toggle(ModSettings.EnableSpellWindWall, "└─ <b>Wind Wall / Windwand</b>");
+                            ModSettings.EnableSpellDaylight = GUILayout.Toggle(ModSettings.EnableSpellDaylight, "└─ <b>Daylight / Tageslicht</b>");
+                        });
 
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>💚 Healing & Restoration:</b>");
-                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds / Wunden heilen</b>");
-                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word / Wort der Heilung</b>");
-                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration / Teilw. Genesung</b>");
-                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry / Gute Beere</b>");
-                        ModSettings.EnableSpellCreateFoodAndWater = GUILayout.Toggle(ModSettings.EnableSpellCreateFoodAndWater, "     └─ <b>Create Food & Water / Nahrung erschaffen</b>");
-                        ModSettings.EnableSpellRevivify = GUILayout.Toggle(ModSettings.EnableSpellRevivify, "     └─ <b>Revivify / Wiederbeleben</b>");
-
-                        GUILayout.Space(3);
-                        GUILayout.Label("  <b>🛡️ Protection & Buffs:</b>");
-                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison / Schutz vor Gift</b>");
-                        ModSettings.EnableSpellProtectionFromEnergy = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromEnergy, "     └─ <b>Protection from Energy / Schutz vor Energie</b>");
-                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin / Rindenhaut</b>");
-                        ModSettings.EnableSpellDarkvision = GUILayout.Toggle(ModSettings.EnableSpellDarkvision, "     └─ <b>Darkvision / Dunkelsicht</b>");
-                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider / Langschritt</b>");
-                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace / Spurlos verbergen</b>");
-                        ModSettings.EnableSpellJump = GUILayout.Toggle(ModSettings.EnableSpellJump, "     └─ <b>Jump / Springen</b>");
-
-                        GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Attack & Control Spells:</b>");
-                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle / Verstricken</b>");
-                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire / Feenfeuer</b>");
-                        ModSettings.EnableSpellFogCloud = GUILayout.Toggle(ModSettings.EnableSpellFogCloud, "     └─ <b>Fog Cloud / Nebelwolke</b>");
-                        ModSettings.EnableSpellAnimalFriendship = GUILayout.Toggle(ModSettings.EnableSpellAnimalFriendship, "     └─ <b>Animal Friendship / Tierfreundschaft</b>");
-                        ModSettings.EnableSpellCharmPerson = GUILayout.Toggle(ModSettings.EnableSpellCharmPerson, "     └─ <b>Charm Person / Person bezaubern</b>");
-                        ModSettings.EnableSpellDetectMagic = GUILayout.Toggle(ModSettings.EnableSpellDetectMagic, "     └─ <b>Detect Magic / Magie entdecken</b>");
-                        ModSettings.EnableSpellDetectPoisonAndDisease = GUILayout.Toggle(ModSettings.EnableSpellDetectPoisonAndDisease, "     └─ <b>Detect Poison / Gift entdecken</b>");
-                        ModSettings.EnableSpellFlameBlade = GUILayout.Toggle(ModSettings.EnableSpellFlameBlade, "     └─ <b>Flame Blade / Flammenklinge</b>");
-                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere / Flammenkugel</b>");
-                        ModSettings.EnableSpellHeatMetal = GUILayout.Toggle(ModSettings.EnableSpellHeatMetal, "     └─ <b>Heat Metal / Metall erhitzen</b>");
-                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person / Person festhalten</b>");
-                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam / Mondstrahl</b>");
-                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth / Dornenwuchs</b>");
-                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning / Blitzschlag rufen</b>");
-                        ModSettings.EnableSpellDispelMagic = GUILayout.Toggle(ModSettings.EnableSpellDispelMagic, "     └─ <b>Dispel Magic / Magie bannen</b>");
-                        ModSettings.EnableSpellSleetStorm = GUILayout.Toggle(ModSettings.EnableSpellSleetStorm, "     └─ <b>SleetStorm / Graupelschauer</b>");
-                        ModSettings.EnableSpellWindWall = GUILayout.Toggle(ModSettings.EnableSpellWindWall, "     └─ <b>Wind Wall / Windwand</b>");
-                        ModSettings.EnableSpellDaylight = GUILayout.Toggle(ModSettings.EnableSpellDaylight, "     └─ <b>Daylight / Tageslicht</b>");
-
-                        GUILayout.Space(3);
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, " <b>Auto-Weapon Swap</b>");
                         GUILayout.EndVertical();
                     }
                     else if (currentChoice == MODE_FIGHTER)
@@ -463,23 +472,31 @@ namespace SolastaAI
                         GUILayout.EndHorizontal();
 
                         GUILayout.Space(3);
-                        GUILayout.Label("  <b>🛡️ Defense & Recovery:</b>");
-                        ModSettings.EnableFighterSecondWind = GUILayout.Toggle(ModSettings.EnableFighterSecondWind, "     └─ <b>Second Wind / Durchschnaufen</b>");
-                        ModSettings.EnableFighterIndomitable = GUILayout.Toggle(ModSettings.EnableFighterIndomitable, "     └─ <b>Indomitable / Unbeugsam</b>");
 
-                        GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Offensive Skills & Maneuvers:</b>");
-                        ModSettings.EnableFighterActionSurge = GUILayout.Toggle(ModSettings.EnableFighterActionSurge, "     └─ <b>Action Surge / Tatendrank</b>");
-                        ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(ModSettings.EnableFighterPushingAttack, "     └─ <b>Pushing Attack / Stoßangriff</b>");
-                        ModSettings.EnableFighterTripAttack = GUILayout.Toggle(ModSettings.EnableFighterTripAttack, "     └─ <b>Trip Attack / Beinstellen</b>");
-                        ModSettings.EnableFighterRiposte = GUILayout.Toggle(ModSettings.EnableFighterRiposte, "     └─ <b>Riposte</b>");
-                        ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(ModSettings.EnableFighterPrecisionAttack, "     └─ <b>Precision Attack / Präzisionsangriff</b>");
+                        string fPrefix = $"{name}_fighter_";
 
-                        GUILayout.Space(3);
-                        GUILayout.Label("  <b>🎯 Movement & Positioning:</b>");
-                        if (ModSettings.FighterStyle == "Ranged")
-                            ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "     └─ <b>Avoid Opportunity Attacks</b>");
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "     └─ <b>Auto-Weapon Swap</b>");
+                        DrawCategoryHeader(fPrefix + "defense", "<b>🛡️ Defense & Recovery</b>", () =>
+                        {
+                            ModSettings.EnableFighterSecondWind = GUILayout.Toggle(ModSettings.EnableFighterSecondWind, "└─ <b>Second Wind / Durchschnaufen</b>");
+                            ModSettings.EnableFighterIndomitable = GUILayout.Toggle(ModSettings.EnableFighterIndomitable, "└─ <b>Indomitable / Unbeugsam</b>");
+                        });
+
+                        DrawCategoryHeader(fPrefix + "offensive", "<b>⚔️ Offensive Skills & Maneuvers</b>", () =>
+                        {
+                            ModSettings.EnableFighterActionSurge = GUILayout.Toggle(ModSettings.EnableFighterActionSurge, "└─ <b>Action Surge / Tatendrank</b>");
+                            ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(ModSettings.EnableFighterPushingAttack, "└─ <b>Pushing Attack / Stoßangriff</b>");
+                            ModSettings.EnableFighterTripAttack = GUILayout.Toggle(ModSettings.EnableFighterTripAttack, "└─ <b>Trip Attack / Beinstellen</b>");
+                            ModSettings.EnableFighterRiposte = GUILayout.Toggle(ModSettings.EnableFighterRiposte, "└─ <b>Riposte</b>");
+                            ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(ModSettings.EnableFighterPrecisionAttack, "└─ <b>Precision Attack / Präzisionsangriff</b>");
+                        });
+
+                        DrawCategoryHeader(fPrefix + "movement", "<b>🎯 Movement & Positioning</b>", () =>
+                        {
+                            if (ModSettings.FighterStyle == "Ranged")
+                                ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "└─ <b>Avoid Opportunity Attacks</b>");
+                            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "└─ <b>Auto-Weapon Swap</b>");
+                        });
+
                         GUILayout.EndVertical();
                     }
                     else if (currentChoice > 0)
@@ -504,6 +521,25 @@ namespace SolastaAI
         {
             ModSettings.Save(modEntry);
             SaveChoices();
+        }
+
+        private static void DrawCategoryHeader(string key, string title, Action drawContent)
+        {
+            bool isExpanded = CategoryFoldStates.TryGetValue(key, out bool exp) && exp;
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(isExpanded ? " <b>[-]</b> " : " <b>[+]</b> ", GUILayout.Width(45)))
+            {
+                CategoryFoldStates[key] = !isExpanded;
+            }
+            GUILayout.Label(title, GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+
+            if (isExpanded)
+            {
+                GUILayout.BeginVertical("box");
+                drawContent();
+                GUILayout.EndVertical();
+            }
         }
 
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
