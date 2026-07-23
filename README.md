@@ -1,15 +1,15 @@
 # SolastaAI
 
-A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, Fighter & Druid class automation with granular skill controls, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
+A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, Fighter & Druid class automation with individual spell & skill controls, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
 
 ## 🌟 Key Features
 
 1. **Complete Independence & Update-Safety:**
    - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
-2. **Structured Dropdown UI & Granular Skill Toggles:**
+2. **Structured Dropdown UI & Categorized Spell Controls:**
    - Convenient **Dropdown Selector** per hero e.g. `[ AI: Druid (Shillelagh) ▼ ]`.
-   - **Granular Skill Controls:** Every single skill used by Fighter and Druid modes can be toggled on or off individually right under each hero's dropdown!
+   - **Categorized Individual Spell & Skill Controls:** Every single Druid spell and Fighter skill can be toggled on or off individually under clean thematic sub-categories!
    - Archetypes available per hero:
      - `Human (Player Control)`
      - `AI: Melee (Default)`
@@ -22,25 +22,16 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Fighter (Ranged)` - Ranged archery positioning and opportunity attack prevention.
      - `AI: Mage Combat`
      - `AI: Rogue Combat`
-3. **Granular Skill Controls Per Mode:**
+3. **Categorized Spell & Skill Controls Per Mode:**
+   - **Druid Modes:**
+     - **💚 Healing & Restoration:** `Cure Wounds`, `Healing Word`, `Lesser Restoration`, `Goodberry`
+     - **🛡️ Protection & Buffs:** `Shillelagh`, `Guidance`, `Protection from Poison`, `Barkskin`, `Longstrider`, `Pass Without Trace`
+     - **⚔️ Attack & Crowd Control:** `Produce Flame`, `Thorn Whip`, `Poison Spray`, `Entangle`, `Faerie Fire`, `Flaming Sphere`, `Hold Person`, `Moonbeam`, `Spike Growth`, `Call Lightning`
    - **Fighter Modes:**
      - `[x] Use Second Wind / Durchschnaufen`
      - `[x] Use Action Surge / Tatendrank`
      - `[x] Avoid Opportunity Attacks` (For Ranged Fighters)
      - `[x] Auto-Weapon Swap`
-   - **Druid (Wild Shape) Mode:**
-     - `[x] Use Wild Shape / Tiergestalt`
-     - `[x] Use Protection from Poison / Schutz vor Gift`
-     - `[x] Use General Buff & Utility Spells`
-     - `[x] Use Ally Healing Spells`
-     - `[x] Auto-Weapon Swap`
-   - **Druid (Shillelagh) Mode:**
-     - `[x] Use Shillelagh / Zauberstock`
-     - `[x] Use Guidance / Göttliche Führung`
-     - `[x] Use Protection from Poison / Schutz vor Gift`
-     - `[x] Use General Buff & Utility Spells`
-     - `[x] Use Ally Healing Spells`
-     - `[x] Advance Towards Target + Ranged Cantrips`
 4. **Automatic Weapon Swapping:**
    - Automatically evaluates tactical grid distances during a character's turn.
 5. **Emergency Low HP Protection:**

@@ -40,51 +40,46 @@ namespace SolastaAI
         public bool EnableAutoWeaponSwap = true;
 
         // --- GRANULAR FIGHTER SKILL TOGGLES ---
-        /// <summary>
-        /// Enables Second Wind / Durchschnaufen automation.
-        /// </summary>
         public bool EnableFighterSecondWind = true;
-
-        /// <summary>
-        /// Enables Action Surge / Tatendrank automation.
-        /// </summary>
         public bool EnableFighterActionSurge = true;
-
-        /// <summary>
-        /// Enables Opportunity Attack protection for Ranged Fighters.
-        /// </summary>
         public bool EnableAvoidOpportunityAttacks = true;
 
-        // --- GRANULAR DRUID SKILL TOGGLES ---
-        /// <summary>
-        /// Enables Wild Shape / Tiergestalt transformation.
-        /// </summary>
+        // --- GRANULAR DRUID SKILL & SPELL TOGGLES ---
         public bool EnableDruidWildShape = true;
 
-        /// <summary>
-        /// Enables Shillelagh / Zauberstock weapon enchantment.
-        /// </summary>
-        public bool EnableDruidShillelagh = true;
+        // Cantrips
+        public bool EnableSpellShillelagh = true;
+        public bool EnableSpellGuidance = true;
+        public bool EnableSpellProduceFlame = true;
+        public bool EnableSpellThornWhip = true;
+        public bool EnableSpellPoisonSpray = true;
 
-        /// <summary>
-        /// Enables Guidance / Göttliche Führung self-buff when out of melee reach.
-        /// </summary>
-        public bool EnableDruidGuidance = true;
+        // 1st Level Spells
+        public bool EnableSpellCureWounds = true;
+        public bool EnableSpellHealingWord = true;
+        public bool EnableSpellEntangle = true;
+        public bool EnableSpellFaerieFire = true;
+        public bool EnableSpellFogCloud = true;
+        public bool EnableSpellGoodberry = true;
+        public bool EnableSpellJump = true;
+        public bool EnableSpellLongstrider = true;
 
-        /// <summary>
-        /// Enables healing support for wounded allies by Druid spellcasters.
-        /// </summary>
-        public bool EnableDruidHealing = true;
+        // 2nd Level Spells
+        public bool EnableSpellProtectionFromPoison = true;
+        public bool EnableSpellBarkskin = true;
+        public bool EnableSpellFlamingSphere = true;
+        public bool EnableSpellHoldPerson = true;
+        public bool EnableSpellLesserRestoration = true;
+        public bool EnableSpellMoonbeam = true;
+        public bool EnableSpellSpikeGrowth = true;
+        public bool EnableSpellPassWithoutTrace = true;
 
-        /// <summary>
-        /// Enables Protection from Poison / Schutz vor Gift spell usage on allies.
-        /// </summary>
-        public bool EnableDruidProtectionFromPoison = true;
-
-        /// <summary>
-        /// Enables general buff & utility spellcasting for Druids.
-        /// </summary>
-        public bool EnableDruidBuffSpells = true;
+        // 3rd Level & Higher Spells
+        public bool EnableSpellCallLightning = true;
+        public bool EnableSpellDispelMagic = true;
+        public bool EnableSpellSleetStorm = true;
+        public bool EnableSpellWindWall = true;
+        public bool EnableSpellDaylight = true;
 
         /// <summary>
         /// Automatically applies AI control for guest/companion characters.
@@ -268,72 +263,60 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    // 3. DYNAMIC GRANULAR SKILL SETTINGS (Displayed below dropdown based on selected mode!)
-                    if (currentChoice == 5) // Druid (Wild Shape)
+                    // 3. DYNAMIC INDIVIDUAL SPELL & SKILL TOGGLES (Structured by Categories!)
+                    if (currentChoice == 5 || currentChoice == 6) // Druid (Wild Shape) or Druid (Shillelagh)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>✨ Individual Spell & Skill Controls for {displayName} ({currentArchetypeName}):</i>");
 
-                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(
-                            ModSettings.EnableDruidWildShape,
-                            "   └─ <b>Use Wild Shape / Tiergestalt</b> (Transform when threatened or HP < 75%)"
-                        );
+                        if (currentChoice == 5)
+                        {
+                            ModSettings.EnableDruidWildShape = GUILayout.Toggle(
+                                ModSettings.EnableDruidWildShape,
+                                "   └─ <b>Wild Shape / Tiergestalt</b> (Transform when threatened or HP < 75%)"
+                            );
+                        }
 
-                        ModSettings.EnableDruidProtectionFromPoison = GUILayout.Toggle(
-                            ModSettings.EnableDruidProtectionFromPoison,
-                            "   └─ <b>Use Protection from Poison / Schutz vor Gift</b> (Casts poison protection on poisoned allies)"
-                        );
+                        // Category 1: Healing & Support Spells
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>💚 Healing & Restoration Spells:</b>");
+                        ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "     └─ <b>Cure Wounds / Wunden heilen</b>");
+                        ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "     └─ <b>Healing Word / Heilendes Wort</b>");
+                        ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "     └─ <b>Lesser Restoration / Geringe Genesung</b>");
+                        ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "     └─ <b>Goodberry / Gute Beere</b>");
 
-                        ModSettings.EnableDruidBuffSpells = GUILayout.Toggle(
-                            ModSettings.EnableDruidBuffSpells,
-                            "   └─ <b>Use General Buff & Utility Spells</b> (Casts buff and utility spells during combat)"
-                        );
+                        // Category 2: Protection & Buff Spells
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>🛡️ Protection & Buff Spells:</b>");
+                        if (currentChoice == 6)
+                        {
+                            ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "     └─ <b>Shillelagh / Zauberstock</b>");
+                            ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "     └─ <b>Guidance / Göttliche Führung</b>");
+                        }
+                        ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison / Schutz vor Gift</b>");
+                        ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin / Rindenhaut</b>");
+                        ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider / Langer Schritt</b>");
+                        ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "     └─ <b>Pass Without Trace / Spurlos gleiten</b>");
 
-                        ModSettings.EnableDruidHealing = GUILayout.Toggle(
-                            ModSettings.EnableDruidHealing,
-                            "   └─ <b>Use Ally Healing Spells</b> (Automatically heal wounded allies when HP < 50%)"
-                        );
+                        // Category 3: Attack & Crowd Control Spells
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>⚔️ Attack & Crowd Control Spells:</b>");
+                        ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame / Flamme erzeugen</b>");
+                        ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip / Dornenpeitsche</b>");
+                        ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray / Giftwolke</b>");
+                        ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle / Verstricken</b>");
+                        ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire / Feenfeuer</b>");
+                        ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere / Flammenkugel</b>");
+                        ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "     └─ <b>Hold Person / Person festhalten</b>");
+                        ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "     └─ <b>Moonbeam / Mondstrahl</b>");
+                        ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "     └─ <b>Spike Growth / Dornenwuchs</b>");
+                        ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "     └─ <b>Call Lightning / Blitze rufen</b>");
 
+                        // Category 4: Movement & Positioning
+                        GUILayout.Space(3);
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                             ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Auto-Weapon Swap</b> (Equip ranged weapons when targets are out of reach)"
-                        );
-
-                        GUILayout.EndVertical();
-                    }
-                    else if (currentChoice == 6) // Druid (Shillelagh Melee)
-                    {
-                        GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
-
-                        ModSettings.EnableDruidShillelagh = GUILayout.Toggle(
-                            ModSettings.EnableDruidShillelagh,
-                            "   └─ <b>Use Shillelagh / Zauberstock</b> (Enchant melee weapon at turn start)"
-                        );
-
-                        ModSettings.EnableDruidGuidance = GUILayout.Toggle(
-                            ModSettings.EnableDruidGuidance,
-                            "   └─ <b>Use Guidance / Göttliche Führung</b> (Cast self-buff when out of melee reach)"
-                        );
-
-                        ModSettings.EnableDruidProtectionFromPoison = GUILayout.Toggle(
-                            ModSettings.EnableDruidProtectionFromPoison,
-                            "   └─ <b>Use Protection from Poison / Schutz vor Gift</b> (Casts poison protection on poisoned allies)"
-                        );
-
-                        ModSettings.EnableDruidBuffSpells = GUILayout.Toggle(
-                            ModSettings.EnableDruidBuffSpells,
-                            "   └─ <b>Use General Buff & Utility Spells</b> (Casts buff and utility spells during combat)"
-                        );
-
-                        ModSettings.EnableDruidHealing = GUILayout.Toggle(
-                            ModSettings.EnableDruidHealing,
-                            "   └─ <b>Use Ally Healing Spells</b> (Automatically heal wounded allies when HP < 50%)"
-                        );
-
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
-                            ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Advance Towards Target + Ranged Cantrips</b> (Use ranged cantrip/bow while advancing into melee)"
+                            "   └─ <b>Auto-Weapon Swap / Cantrip Positioning</b> (Advance or switch weapons based on distance)"
                         );
 
                         GUILayout.EndVertical();
@@ -665,17 +648,11 @@ namespace SolastaAI
                     }
                 }
 
-                // 2. Check Protection from Poison (if toggle enabled)
-                if (ModSettings.EnableDruidProtectionFromPoison)
-                {
-                    CheckAndCastProtectionFromPoison(character);
-                }
+                // 2. Protection from Poison
+                CheckAndCastProtectionFromPoison(character);
 
-                // 3. Ally Healing Check (if toggle enabled)
-                if (ModSettings.EnableDruidHealing)
-                {
-                    CheckAndHealAllies(character);
-                }
+                // 3. Ally Healing Check
+                CheckAndHealAllies(character);
 
                 // 4. Auto-Weapon Swap for Druids
                 CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
@@ -700,7 +677,7 @@ namespace SolastaAI
                 if (hero == null) return;
 
                 // 1. Cast Shillelagh on melee weapon if enabled & available
-                if (ModSettings.EnableDruidShillelagh && hero.SpellRepertoires != null)
+                if (ModSettings.EnableSpellShillelagh && hero.SpellRepertoires != null)
                 {
                     foreach (var repertoire in hero.SpellRepertoires)
                     {
@@ -726,17 +703,11 @@ namespace SolastaAI
                     }
                 }
 
-                // 2. Check Protection from Poison (if toggle enabled)
-                if (ModSettings.EnableDruidProtectionFromPoison)
-                {
-                    CheckAndCastProtectionFromPoison(character);
-                }
+                // 2. Protection from Poison
+                CheckAndCastProtectionFromPoison(character);
 
-                // 3. Ally Healing Check (if toggle enabled)
-                if (ModSettings.EnableDruidHealing)
-                {
-                    CheckAndHealAllies(character);
-                }
+                // 3. Ally Healing Check
+                CheckAndHealAllies(character);
 
                 // 4. Enemy Distance & Guidance / Ranged Cantrip Advance Check
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
@@ -769,7 +740,7 @@ namespace SolastaAI
                     if (minDistance > 2)
                     {
                         bool castGuidance = false;
-                        if (ModSettings.EnableDruidGuidance && hero.SpellRepertoires != null)
+                        if (ModSettings.EnableSpellGuidance && hero.SpellRepertoires != null)
                         {
                             foreach (var repertoire in hero.SpellRepertoires)
                             {
@@ -823,7 +794,7 @@ namespace SolastaAI
         {
             try
             {
-                if (!ModSettings.EnableDruidProtectionFromPoison || character == null || character.RulesetCharacter == null) return;
+                if (!ModSettings.EnableSpellProtectionFromPoison || character == null || character.RulesetCharacter == null) return;
 
                 var hero = character.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null || hero.SpellRepertoires == null) return;
@@ -873,6 +844,7 @@ namespace SolastaAI
 
         /// <summary>
         /// Helper to check party member health and cast healing spells if any ally has HP < 50%.
+        /// Respects EnableSpellCureWounds and EnableSpellHealingWord toggles.
         /// </summary>
         public static void CheckAndHealAllies(GameLocationCharacter character)
         {
@@ -897,8 +869,8 @@ namespace SolastaAI
                         {
                             if (repertoire == null) continue;
                             var healSpell = repertoire.PreparedSpells.Find(s => s != null && 
-                                (s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0));
+                                ((ModSettings.EnableSpellCureWounds && s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                 (ModSettings.EnableSpellHealingWord && s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)));
 
                             if (healSpell != null && repertoire.CanCastSpell(healSpell, true))
                             {
