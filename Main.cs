@@ -220,7 +220,24 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Restores all party characters to Player Control (MainPlayerControllerId) whenever outside of combat exploration.
+        /// Helper to retrieve the active Human Player Controller ID dynamically.
+        /// </summary>
+        public static int GetPlayerControllerId()
+        {
+            try
+            {
+                var activeController = Gui.ActivePlayerController;
+                if (activeController != null)
+                {
+                    return activeController.ControllerId;
+                }
+            }
+            catch {}
+            return PlayerControllerManager.MainPlayerControllerId;
+        }
+
+        /// <summary>
+        /// Restores party characters that were left in DM/AI mode back to the active Player Controller whenever outside of combat exploration.
         /// </summary>
         public static void EnsureExplorationControl()
         {
@@ -232,15 +249,19 @@ namespace SolastaAI
                     var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
                     if (charService != null && charService.PartyCharacters != null)
                     {
+                        int humanId = GetPlayerControllerId();
                         bool dirtied = false;
+
                         foreach (var character in charService.PartyCharacters)
                         {
-                            if (character != null && character.ControllerId != PlayerControllerManager.MainPlayerControllerId)
+                            // ONLY reset characters that are currently set to DM/AI Controller ID (4242)
+                            if (character != null && character.ControllerId == PlayerControllerManager.DmControllerId)
                             {
-                                character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
+                                character.ControllerId = humanId;
                                 dirtied = true;
                             }
                         }
+
                         if (dirtied)
                         {
                             var activePlayerController = Gui.ActivePlayerController;
@@ -308,11 +329,12 @@ namespace SolastaAI
             {
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
                 bool isInBattle = battleService != null && battleService.IsBattleInProgress;
+                int humanId = GetPlayerControllerId();
 
                 // Outside of battle, ALWAYS force Player Control so heroes can move and be selected in exploration!
                 if (!isInBattle || choice <= 0)
                 {
-                    character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
+                    character.ControllerId = humanId;
                 }
                 else
                 {
