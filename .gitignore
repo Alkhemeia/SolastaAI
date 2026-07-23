@@ -1,0 +1,7 @@
+SavedAIControllers.json
+Settings.xml
+.fuse_hidden*
+*.cache
+.vs/
+bin/
+obj/
