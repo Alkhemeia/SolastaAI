@@ -600,53 +600,8 @@ namespace SolastaAI
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null) return;
 
-                // Cast Shillelagh only if not already active on the weapon/character
-                if (ModSettings.EnableSpellShillelagh && hero.SpellRepertoires != null)
-                {
-                    // Check if Shillelagh condition is already active
-                    bool shillelaghAlreadyActive = false;
-                    if (hero.AllConditions != null)
-                    {
-                        foreach (var cond in hero.AllConditions)
-                        {
-                            if (cond?.ConditionDefinition?.Name != null &&
-                                (cond.ConditionDefinition.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 cond.ConditionDefinition.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0))
-                            {
-                                shillelaghAlreadyActive = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!shillelaghAlreadyActive)
-                    {
-                        foreach (var rep in hero.SpellRepertoires)
-                        {
-                            if (rep == null) continue;
-                            var spell = rep.KnownCantrips.Find(s => s != null &&
-                                (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
-                            if (spell == null) continue;
-
-                            var impl = ServiceRepository.GetService<IRulesetImplementationService>();
-                            if (impl != null)
-                            {
-                                var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
-                                if (effect != null)
-                                {
-                                    hero.CastSpell(effect, true, false);
-                                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name} cast Shillelagh (not yet active)!");
-                                }
-                            }
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} skipped Shillelagh cast (already active).");
-                    }
-                }
+                // NOTE: Shillelagh bonus action is cast in the StartBattleTurn POSTFIX
+                // (after turn/action-economy is fully initialized) via TryCastShillelaghInPostfix().
 
                 CheckAndCastProtectionFromPoison(character);
                 CheckAndHealAllies(character);
@@ -850,6 +805,123 @@ namespace SolastaAI
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] SaveChoices: {ex}"); }
         }
+
+        /// <summary>
+        /// Cast Shillelagh as a proper Bonus Action in the POSTFIX of StartBattleTurn,
+        /// after action economy is initialized. Uses ExecuteInstantSingleAction(Id.CastBonus)
+        /// with CharacterActionParams built via reflection to set spell repertoire and effect.
+        /// Only casts if Shillelagh is not already active on the character.
+        /// </summary>
+        public static void TryCastShillelaghInPostfix(GameLocationCharacter character)
+        {
+            try
+            {
+                if (!ModSettings.EnableSpellShillelagh) return;
+                var hero = character?.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.SpellRepertoires == null) return;
+
+                // Check if Shillelagh is already active
+                if (hero.AllConditions != null)
+                    foreach (var cond in hero.AllConditions)
+                        if (cond?.ConditionDefinition?.Name != null &&
+                            cond.ConditionDefinition.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh already active, skip.");
+                            return;
+                        }
+
+                foreach (var rep in hero.SpellRepertoires)
+                {
+                    if (rep == null) continue;
+                    var spell = rep.KnownCantrips.Find(s => s != null &&
+                        (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
+                    if (spell == null) continue;
+
+                    var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                    if (impl == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: IRulesetImplementationService null!"); break; }
+
+                    var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
+                    if (effect == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh effect is null!"); break; }
+
+                    // Build CharacterActionParams for CastBonus (Shillelagh is a bonus action cantrip)
+                    // Set private fields via reflection since no public setters exist.
+                    var castParams = new CharacterActionParams(character, ActionDefinitions.Id.CastBonus);
+                    var pType = castParams.GetType();
+                    pType.GetField("spellRepertoire", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(castParams, rep);
+                    pType.GetField("activeEffect", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(castParams, effect);
+
+                    // Add caster as the target (Shillelagh targets self/own weapon)
+                    var tgtChars = pType.GetField("targetCharacters", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(castParams) as List<GameLocationCharacter>;
+                    tgtChars?.Add(character);
+
+                    var actionService = ServiceRepository.GetService<IGameLocationActionService>();
+                    if (actionService == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: IGameLocationActionService null!"); break; }
+
+                    actionService.ExecuteInstantSingleAction(castParams);
+                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast via ExecuteInstantSingleAction(CastBonus)!");
+                    break;
+                }
+            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] TryCastShillelaghInPostfix: {ex}"); }
+        }
+
+        /// <summary>
+        /// Controls Ranged Fighter movement: spends Move action to prevent advancing,
+        /// but preserves it when (a) melee-threatened (to retreat) or (b) on lower ground
+        /// than enemies (to seek elevation via CasterCombatDecisions pathfinding).
+        /// </summary>
+        public static void HandleRangedFighterPositioning(GameLocationCharacter character)
+        {
+            try
+            {
+                if (character.ControllerId != PlayerControllerManager.DmControllerId) return;
+                int minDist = GetMinDistanceToEnemy(character);
+
+                if (minDist <= 2)
+                {
+                    ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Melee threat ({minDist} cells), move preserved for retreat.");
+                    return;
+                }
+
+                // Allow movement if fighter is on lower ground than enemies → seek elevation
+                if (IsOnLowerGroundThanEnemies(character))
+                {
+                    ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': On lower ground – move preserved to seek elevated position.");
+                    return;
+                }
+
+                // Already at safe range and good elevation → spend move so AI doesn't advance
+                character.SpendActionType(ActionDefinitions.ActionType.Move);
+                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (range {minDist} cells, good elevation).");
+            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] HandleRangedFighterPositioning: {ex}"); }
+        }
+
+        /// <summary>
+        /// Returns true if any living enemy is significantly higher (z > myZ + 1) than this character.
+        /// Used to decide whether a ranged fighter should seek elevated ground.
+        /// </summary>
+        public static bool IsOnLowerGroundThanEnemies(GameLocationCharacter character)
+        {
+            try
+            {
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService?.IsBattleInProgress != true || battleService.Battle == null) return false;
+                var enemies = (character.Side == RuleDefinitions.Side.Ally)
+                    ? battleService.Battle.EnemyContenders
+                    : battleService.Battle.PlayerContenders;
+                if (enemies == null || enemies.Count == 0) return false;
+                int myZ = character.LocationPosition.z;
+                foreach (var enemy in enemies)
+                {
+                    if (enemy?.RulesetCharacter == null || enemy.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth) continue;
+                    if (enemy.LocationPosition.z > myZ + 1) return true;
+                }
+                return false;
+            }
+            catch { return false; }
+        }
     }
 
     // ===== HARMONY PATCHES =====
@@ -922,27 +994,20 @@ namespace SolastaAI
                 if (__instance == null) return;
                 string name = __instance.Name ?? "";
                 if (!Main.CharacterAIChoices.TryGetValue(name, out int choice)) return;
-                if (choice != Main.MODE_FIGHTER_RANGED) return;
-                // Only act when the character is AI-controlled
                 if (__instance.ControllerId != PlayerControllerManager.DmControllerId) return;
 
-                int minDist = Main.GetMinDistanceToEnemy(__instance);
+                switch (choice)
+                {
+                    case Main.MODE_DRUID_SHILLELAGH:
+                        // Cast Shillelagh as a proper Bonus Action now that the turn is fully initialized.
+                        Main.TryCastShillelaghInPostfix(__instance);
+                        break;
 
-                // If no enemy is immediately adjacent (melee threat), spend the move action.
-                // This leaves the AI with only Attack / Bonus actions → it shoots from where it stands.
-                // If an enemy is already adjacent (≤ 2 cells), keep the move so the fighter can retreat.
-                if (minDist > 2)
-                {
-                    __instance.SpendActionType(ActionDefinitions.ActionType.Move);
-                    Main.ModEntry?.Logger.Log(
-                        $"[SolastaAI] Ranged Fighter '{name}': Move action spent " +
-                        $"(nearest enemy {minDist} cells away). Fighter stays at range.");
-                }
-                else
-                {
-                    Main.ModEntry?.Logger.Log(
-                        $"[SolastaAI] Ranged Fighter '{name}': Enemy at {minDist} cells – " +
-                        $"move kept so fighter can retreat.");
+                    case Main.MODE_FIGHTER_RANGED:
+                        // Spend move action to prevent advancing, but preserve it when
+                        // melee-threatened (retreat) or on lower ground (seek elevation).
+                        Main.HandleRangedFighterPositioning(__instance);
+                        break;
                 }
             }
             catch (Exception ex)
