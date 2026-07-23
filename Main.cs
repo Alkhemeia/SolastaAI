@@ -528,7 +528,7 @@ namespace SolastaAI
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
                             case MODE_DRUID_WILD:     pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case MODE_FIGHTER_MELEE:  pkg = db.GetElement("FighterCombatDecisions", true); break;
+                            case MODE_FIGHTER_MELEE:  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                             // Ranged Fighter: CasterCombatDecisions keeps maximum distance from enemies.
                             case MODE_FIGHTER_RANGED: pkg = db.GetElement("CasterCombatDecisions", true); break;
                             case MODE_MAGE:           pkg = db.GetElement("CasterCombatDecisions", true); break;
@@ -740,15 +740,35 @@ namespace SolastaAI
                     return;
                 }
 
-                if (minDist > 2 && !currentlyRanged)
+                // Melee Fighter logic: check if any enemy can be reached within movement range (6 cells walk)
+                int maxReachableDist = 6;
+
+                // If nearest enemy is farther than 6 cells (out of 1-turn melee reach) and we are currently holding melee weapon:
+                // Switch to ranged weapon so the fighter can shoot while advancing!
+                if (minDist > maxReachableDist && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                    if (!hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    if (hero.IsWieldingRangedWeapon())
+                    {
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy too far for melee ({minDist} cells > {maxReachableDist}), switched to ranged weapon set to attack from distance.");
+                    }
+                    else
+                    {
+                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    }
                 }
-                else if (minDist <= 2 && currentlyRanged)
+                else if (minDist <= maxReachableDist && currentlyRanged)
                 {
+                    // Enemy is within melee reach (<= 6 cells): switch back to melee weapon set
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
-                    if (hero.IsWieldingRangedWeapon()) inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    if (!hero.IsWieldingRangedWeapon())
+                    {
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy reachable in melee ({minDist} cells <= {maxReachableDist}), switched to melee weapon set.");
+                    }
+                    else
+                    {
+                        inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                    }
                 }
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndAutoSwapWeapons: {ex}"); }
