@@ -146,10 +146,66 @@ namespace SolastaAI
         {
             if (string.IsNullOrEmpty(spellName)) return true;
 
+            // Check user-controlled spell toggles FIRST - disabled spells must ALWAYS be blocked
+            if (spellName.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellShillelagh) return false;
+            if (spellName.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellGuidance) return false;
+            if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellProduceFlame) return false;
+            if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellThornWhip) return false;
+            if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellPoisonSpray) return false;
+            if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellChillTouch) return false;
+            if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellCureWounds) return false;
+            if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellHealingWord) return false;
+            if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellEntangle) return false;
+            if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellFaerieFire) return false;
+            if (spellName.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellFogCloud) return false;
+            if (spellName.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellGoodberry) return false;
+            if (spellName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellJump) return false;
+            if (spellName.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellLongstrider) return false;
+            if (spellName.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellProtectionFromPoison) return false;
+            if (spellName.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellBarkskin) return false;
+            if (spellName.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellFlamingSphere) return false;
+            if (spellName.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellHoldPerson) return false;
+            if (spellName.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellLesserRestoration) return false;
+            if (spellName.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellMoonbeam) return false;
+            if (spellName.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellSpikeGrowth) return false;
+            if (spellName.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellPassWithoutTrace) return false;
+            if (spellName.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellCallLightning) return false;
+            if (spellName.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellDispelMagic) return false;
+            if (spellName.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellSleetStorm) return false;
+            if (spellName.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellWindWall) return false;
+            if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
+                if (!ModSettings.EnableSpellDaylight) return false;
+
             int mode = GetCurrentTurnCharacterMode();
 
-            // For Shillelagh Druid: block ranged cantrips from AI engine so it MUST advance to melee.
-            // Our own script handles ranged cantrips explicitly while advancing.
+            // For Shillelagh Druid: block ranged cantrips & non-essential spells from AI engine
+            // so it is FORCED to advance to melee with its Shillelagh weapon.
             if (mode == MODE_DRUID_SHILLELAGH)
             {
                 if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0) return false;
@@ -157,7 +213,6 @@ namespace SolastaAI
                 if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                // Also block support/buff spells the AI might self-cast instead of advancing
                 if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0) return false;
             }
@@ -606,40 +661,8 @@ namespace SolastaAI
                 CheckAndCastProtectionFromPoison(character);
                 CheckAndHealAllies(character);
 
-                // Check distance - use ranged cantrips while advancing only when explicitly called
-                int minDist = GetMinDistanceToEnemy(character);
-                if (minDist > 2)
-                {
-                    // Cast Guidance while advancing (handled by melee package moving us forward)
-                    bool castGuidance = false;
-                    if (ModSettings.EnableSpellGuidance && hero.SpellRepertoires != null)
-                    {
-                        foreach (var rep in hero.SpellRepertoires)
-                        {
-                            if (rep == null) continue;
-                            var spell = rep.KnownCantrips.Find(s => s != null &&
-                                s.Name.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0);
-                            if (spell == null || !rep.CanCastSpell(spell, true)) continue;
-                            var impl = ServiceRepository.GetService<IRulesetImplementationService>();
-                            if (impl != null)
-                            {
-                                var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
-                                if (effect != null) { hero.CastSpell(effect, true, false); castGuidance = true; }
-                            }
-                            break;
-                        }
-                    }
-                    if (!castGuidance)
-                    {
-                        // Switch to ranged weapon so we can shoot while the melee package moves us forward
-                        CheckAndAutoSwapWeapons(character, true);
-                    }
-                }
-                else
-                {
-                    // In melee range: ensure melee weapon equipped
-                    CheckAndAutoSwapWeapons(character, false);
-                }
+                // Shillelagh Druid ALWAYS stays on melee weapon so he advances into melee
+                CheckAndAutoSwapWeapons(character, false);
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteShillelaghDruidTactics: {ex}"); }
         }
@@ -1103,21 +1126,16 @@ namespace SolastaAI
                 if (effectSpell?.SpellDefinition != null)
                 {
                     string name = effectSpell.SpellDefinition.Name;
-                    // Only block if the spell is user-disabled (not mode-blocked, which is for AI selection only)
-                    // This allows our own code to cast Shillelagh explicitly while blocking AI from using disabled spells.
-                    int mode = Main.GetCurrentTurnCharacterMode();
-                    if (mode == Main.MODE_DRUID_SHILLELAGH)
+                    // Allow explicit Shillelagh cast from our own Postfix script
+                    if (name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        // For Shillelagh Druid: only allow Shillelagh (our explicit cast) and healing/support spells
-                        // Block ranged attack cantrips from executing (AI shouldn't have selected them, but as last resort)
-                        if (name.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellProduceFlame) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
-                        if (name.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellThornWhip) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
-                        if (name.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellPoisonSpray) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
-                        if ((name.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0) && !Main.ModSettings.EnableSpellChillTouch) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
+                        if (!Main.ModSettings.EnableSpellShillelagh) return false;
+                        return true;
                     }
-                    if (!Main.IsSpellEnabledForAI(name) && mode != Main.MODE_DRUID_SHILLELAGH)
+
+                    if (!Main.IsSpellEnabledForAI(name))
                     {
-                        Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}");
+                        Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled/mode): {name}");
                         return false;
                     }
                 }
