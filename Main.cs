@@ -82,11 +82,10 @@ namespace SolastaAI
         public const int MODE_CASTER        = 3;
         public const int MODE_CLERIC        = 4;
         public const int MODE_DRUID_WILD    = 5;
-        public const int MODE_DRUID_SHILLELAGH = 6;
-        public const int MODE_FIGHTER_MELEE = 7;
-        public const int MODE_FIGHTER_RANGED = 8;
-        public const int MODE_MAGE          = 9;
-        public const int MODE_ROGUE         = 10;
+        public const int MODE_FIGHTER_MELEE = 6;
+        public const int MODE_FIGHTER_RANGED = 7;
+        public const int MODE_MAGE          = 8;
+        public const int MODE_ROGUE         = 9;
 
         public static readonly string[] AIPackageNames = new string[]
         {
@@ -96,7 +95,6 @@ namespace SolastaAI
             "AI: Caster (Backup Attacks)",
             "AI: Cleric Combat",
             "AI: Druid (Wild Shape)",
-            "AI: Druid (Shillelagh)",
             "AI: Fighter (Melee)",
             "AI: Fighter (Ranged)",
             "AI: Mage Combat",
@@ -201,21 +199,6 @@ namespace SolastaAI
                 if (!ModSettings.EnableSpellWindWall) return false;
             if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
                 if (!ModSettings.EnableSpellDaylight) return false;
-
-            int mode = GetCurrentTurnCharacterMode();
-
-            // For Shillelagh Druid: block ranged cantrips & non-essential spells from AI engine
-            // so it is FORCED to advance to melee with its Shillelagh weapon.
-            if (mode == MODE_DRUID_SHILLELAGH)
-            {
-                if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-                if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0) return false;
-            }
 
             // User-controlled spell toggles
             if (spellName.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -371,13 +354,12 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    if (currentChoice == MODE_DRUID_WILD || currentChoice == MODE_DRUID_SHILLELAGH)
+                    if (currentChoice == MODE_DRUID_WILD)
                     {
                         GUILayout.BeginVertical("box");
                         GUILayout.Label($"<i>✨ Druid Spell Controls for {displayName}:</i>");
 
-                        if (currentChoice == MODE_DRUID_WILD)
-                            ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, "   └─ <b>Wild Shape / Tiergestalt</b>");
+                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, "   └─ <b>Wild Shape / Tiergestalt</b>");
 
                         GUILayout.Space(3);
                         GUILayout.Label("  <b>💚 Healing & Restoration:</b>");
@@ -388,11 +370,6 @@ namespace SolastaAI
 
                         GUILayout.Space(3);
                         GUILayout.Label("  <b>🛡️ Protection & Buffs:</b>");
-                        if (currentChoice == MODE_DRUID_SHILLELAGH)
-                        {
-                            ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "     └─ <b>Shillelagh / Zauberstock</b>");
-                            ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "     └─ <b>Guidance / Göttliche Führung</b>");
-                        }
                         ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "     └─ <b>Protection from Poison</b>");
                         ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "     └─ <b>Barkskin</b>");
                         ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "     └─ <b>Longstrider</b>");
@@ -551,9 +528,6 @@ namespace SolastaAI
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
                             case MODE_DRUID_WILD:     pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            // Shillelagh Druid: Melee package so AI pathfinding advances to melee range.
-                            // Ranged cantrips are blocked by IsSpellEnabledForAI so AI is FORCED to advance.
-                            case MODE_DRUID_SHILLELAGH: pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                             case MODE_FIGHTER_MELEE:  pkg = db.GetElement("FighterCombatDecisions", true); break;
                             // Ranged Fighter: CasterCombatDecisions keeps maximum distance from enemies.
                             case MODE_FIGHTER_RANGED: pkg = db.GetElement("CasterCombatDecisions", true); break;
@@ -648,24 +622,7 @@ namespace SolastaAI
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteDruidTactics: {ex}"); }
         }
 
-        public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
-        {
-            try
-            {
-                var hero = character?.RulesetCharacter as RulesetCharacterHero;
-                if (hero == null) return;
 
-                // NOTE: Shillelagh bonus action is cast in the StartBattleTurn POSTFIX
-                // (after turn/action-economy is fully initialized) via TryCastShillelaghInPostfix().
-
-                CheckAndCastProtectionFromPoison(character);
-                CheckAndHealAllies(character);
-
-                // Shillelagh Druid ALWAYS stays on melee weapon so he advances into melee
-                CheckAndAutoSwapWeapons(character, false);
-            }
-            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] ExecuteShillelaghDruidTactics: {ex}"); }
-        }
 
         public static int GetMinDistanceToEnemy(GameLocationCharacter character)
         {
@@ -829,54 +786,7 @@ namespace SolastaAI
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] SaveChoices: {ex}"); }
         }
 
-        /// <summary>
-        /// Cast Shillelagh as a proper Bonus Action in the POSTFIX of StartBattleTurn,
-        /// after action economy is initialized. Uses ExecuteInstantSingleAction(Id.CastBonus)
-        /// with CharacterActionParams built via reflection to set spell repertoire and effect.
-        /// Only casts if Shillelagh is not already active on the character.
-        /// </summary>
-        public static void TryCastShillelaghInPostfix(GameLocationCharacter character)
-        {
-            try
-            {
-                if (!ModSettings.EnableSpellShillelagh) return;
-                var hero = character?.RulesetCharacter as RulesetCharacterHero;
-                if (hero?.SpellRepertoires == null) return;
 
-                // Check if Shillelagh is already active
-                if (hero.AllConditions != null)
-                    foreach (var cond in hero.AllConditions)
-                        if (cond?.ConditionDefinition?.Name != null &&
-                            cond.ConditionDefinition.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh already active, skip.");
-                            return;
-                        }
-
-                foreach (var rep in hero.SpellRepertoires)
-                {
-                    if (rep == null) continue;
-                    var spell = rep.KnownCantrips.Find(s => s != null &&
-                        (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                         s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
-                    if (spell == null) continue;
-
-                    var impl = ServiceRepository.GetService<IRulesetImplementationService>();
-                    if (impl == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: IRulesetImplementationService null!"); break; }
-
-                    var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
-                    if (effect == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh effect is null!"); break; }
-
-                    // Cast spell on RulesetCharacter level AND apply effect forms directly
-                    hero.CastSpell(effect, true, false);
-                    effect.ApplyEffectOnCharacter(hero, true, character.LocationPosition);
-                    character.SpendActionType(ActionDefinitions.ActionType.Bonus);
-                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast and effect applied successfully!");
-                    break;
-                }
-            }
-            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] TryCastShillelaghInPostfix: {ex}"); }
-        }
 
         /// <summary>
         /// Controls Ranged Fighter movement:
@@ -1026,7 +936,6 @@ namespace SolastaAI
                     switch (choice)
                     {
                         case Main.MODE_DRUID_WILD:       Main.ExecuteDruidTactics(__instance); break;
-                        case Main.MODE_DRUID_SHILLELAGH: Main.ExecuteShillelaghDruidTactics(__instance); break;
                         case Main.MODE_FIGHTER_MELEE:    Main.ExecuteFighterTactics(__instance, false); break;
                         case Main.MODE_FIGHTER_RANGED:   Main.ExecuteFighterTactics(__instance, true); break;
                         default:
@@ -1060,11 +969,6 @@ namespace SolastaAI
 
                 switch (choice)
                 {
-                    case Main.MODE_DRUID_SHILLELAGH:
-                        // Cast Shillelagh as a proper Bonus Action now that the turn is fully initialized.
-                        Main.TryCastShillelaghInPostfix(__instance);
-                        break;
-
                     case Main.MODE_FIGHTER_RANGED:
                         // Spend move action to prevent advancing, but preserve it when
                         // melee-threatened (retreat) or on lower ground (seek elevation).
