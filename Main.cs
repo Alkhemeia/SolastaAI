@@ -364,7 +364,7 @@ namespace SolastaAI
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
                             case 5: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
-                            case 6: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged)
+                            case 6: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
                             case 7: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
                             case 8: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
                             default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
@@ -435,8 +435,8 @@ namespace SolastaAI
                     ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge / Tatendrank!");
                 }
 
-                // 3. Auto-Weapon Swap tailored to Fighter archetype
-                CheckAndAutoSwapWeapons(character);
+                // 3. Auto-Weapon Swap tailored specifically to Fighter archetype (Melee vs Ranged)
+                CheckAndAutoSwapWeapons(character, isRangedArchetype);
             }
             catch (Exception ex)
             {
@@ -446,8 +446,9 @@ namespace SolastaAI
 
         /// <summary>
         /// Evaluates distance to closest enemy contender and automatically switches hero weapon configuration between melee and ranged.
+        /// For Ranged Fighters, prioritizes holding the ranged weapon set and staying at distance unless forced into melee without ammo.
         /// </summary>
-        public static void CheckAndAutoSwapWeapons(GameLocationCharacter character)
+        public static void CheckAndAutoSwapWeapons(GameLocationCharacter character, bool isRangedArchetype = false)
         {
             try
             {
@@ -462,7 +463,33 @@ namespace SolastaAI
                 var battle = battleService.Battle;
                 if (battle == null) return;
 
-                // Find closest alive enemy contender on tactical grid
+                var inventory = hero.CharacterInventory;
+                int currentConfig = inventory.CurrentConfiguration;
+                int otherConfig = (currentConfig == 0) ? 1 : 0;
+                bool currentlyRanged = hero.IsWieldingRangedWeapon();
+
+                // RANGED FIGHTER ARCHETYPE SPECIFIC LOGIC:
+                // Always prioritize holding the Ranged weapon configuration!
+                if (isRangedArchetype)
+                {
+                    if (!currentlyRanged)
+                    {
+                        // Switch to secondary configuration to verify if it is ranged
+                        inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
+                        if (hero.IsWieldingRangedWeapon())
+                        {
+                            ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter Tactics: {character.Name} prioritized & equipped Ranged Weapon Set!");
+                        }
+                        else
+                        {
+                            // Secondary set is not ranged, revert back to primary
+                            inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
+                        }
+                    }
+                    return;
+                }
+
+                // GENERAL / MELEE AUTO-WEAPON SWAP LOGIC:
                 int minDistance = int.MaxValue;
                 var enemies = (character.Side == RuleDefinitions.Side.Ally) ? battle.EnemyContenders : battle.PlayerContenders;
                 if (enemies == null || enemies.Count == 0) return;
@@ -487,12 +514,6 @@ namespace SolastaAI
 
                 if (minDistance == int.MaxValue) return;
 
-                var inventory = hero.CharacterInventory;
-                int currentConfig = inventory.CurrentConfiguration;
-                int otherConfig = (currentConfig == 0) ? 1 : 0;
-
-                bool currentlyRanged = hero.IsWieldingRangedWeapon();
-
                 // If no enemy is in melee reach (> 2 cells) and currently holding Melee weapon:
                 if (minDistance > 2 && !currentlyRanged)
                 {
@@ -503,7 +524,6 @@ namespace SolastaAI
                     }
                     else
                     {
-                        // Secondary set is not ranged, revert back
                         inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                     }
                 }
@@ -517,7 +537,6 @@ namespace SolastaAI
                     }
                     else
                     {
-                        // Secondary set was also ranged, revert back
                         inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                     }
                 }
@@ -650,7 +669,7 @@ namespace SolastaAI
                     }
                     else if (choice > 0)
                     {
-                        Main.CheckAndAutoSwapWeapons(__instance);
+                        Main.CheckAndAutoSwapWeapons(__instance, isRangedArchetype: false);
                     }
                 }
             }
