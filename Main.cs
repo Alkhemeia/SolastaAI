@@ -594,29 +594,51 @@ namespace SolastaAI
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null) return;
 
-                // Cast Shillelagh
+                // Cast Shillelagh only if not already active on the weapon/character
                 if (ModSettings.EnableSpellShillelagh && hero.SpellRepertoires != null)
                 {
-                    foreach (var rep in hero.SpellRepertoires)
+                    // Check if Shillelagh condition is already active
+                    bool shillelaghAlreadyActive = false;
+                    if (hero.AllConditions != null)
                     {
-                        if (rep == null) continue;
-                        var spell = rep.KnownCantrips.Find(s => s != null &&
-                            (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                             s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
-                        if (spell == null) continue;
-
-                        // Temporarily bypass our own block for this explicit cast
-                        var impl = ServiceRepository.GetService<IRulesetImplementationService>();
-                        if (impl != null)
+                        foreach (var cond in hero.AllConditions)
                         {
-                            var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
-                            if (effect != null)
+                            if (cond?.ConditionDefinition?.Name != null &&
+                                (cond.ConditionDefinition.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 cond.ConditionDefinition.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0))
                             {
-                                hero.CastSpell(effect, true, false);
-                                ModEntry?.Logger.Log($"[SolastaAI] {character.Name} cast Shillelagh!");
+                                shillelaghAlreadyActive = true;
+                                break;
                             }
                         }
-                        break;
+                    }
+
+                    if (!shillelaghAlreadyActive)
+                    {
+                        foreach (var rep in hero.SpellRepertoires)
+                        {
+                            if (rep == null) continue;
+                            var spell = rep.KnownCantrips.Find(s => s != null &&
+                                (s.Name.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 s.Name.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0));
+                            if (spell == null) continue;
+
+                            var impl = ServiceRepository.GetService<IRulesetImplementationService>();
+                            if (impl != null)
+                            {
+                                var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
+                                if (effect != null)
+                                {
+                                    hero.CastSpell(effect, true, false);
+                                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name} cast Shillelagh (not yet active)!");
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} skipped Shillelagh cast (already active).");
                     }
                 }
 
