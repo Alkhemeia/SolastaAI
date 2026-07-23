@@ -204,15 +204,57 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Frame update listener used to detect the 'N' hotkey during combat turns.
+        /// Frame update listener. Handles the 'N' hotkey during combat and guarantees 100% Player Control during exploration outside combat.
         /// </summary>
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
         {
+            // Outside of active combat, ensure all party members are under Player Control (movable & selectable)
+            EnsureExplorationControl();
+
             if (!ModSettings.EnableHotkeyToggle) return;
 
             if (Input.GetKeyDown(ModSettings.ToggleHotkey))
             {
                 ToggleActiveCharacterAI();
+            }
+        }
+
+        /// <summary>
+        /// Restores all party characters to Player Control (MainPlayerControllerId) whenever outside of combat exploration.
+        /// </summary>
+        public static void EnsureExplorationControl()
+        {
+            try
+            {
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService == null || !battleService.IsBattleInProgress)
+                {
+                    var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
+                    if (charService != null && charService.PartyCharacters != null)
+                    {
+                        bool dirtied = false;
+                        foreach (var character in charService.PartyCharacters)
+                        {
+                            if (character != null && character.ControllerId != PlayerControllerManager.MainPlayerControllerId)
+                            {
+                                character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
+                                dirtied = true;
+                            }
+                        }
+                        if (dirtied)
+                        {
+                            var activePlayerController = Gui.ActivePlayerController;
+                            if (activePlayerController != null)
+                            {
+                                activePlayerController.DirtyControlledCharacters();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in EnsureExplorationControl: {ex}");
             }
         }
 
@@ -257,20 +299,24 @@ namespace SolastaAI
 
         /// <summary>
         /// Applies the requested Controller ID and Decision Package to the specified character.
+        /// Controller ID 4242 (DM/AI) is ONLY applied when actively in combat.
         /// </summary>
         public static void ApplyAIController(GameLocationCharacter character, int choice)
         {
             if (character == null) return;
             try
             {
-                if (choice <= 0)
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                bool isInBattle = battleService != null && battleService.IsBattleInProgress;
+
+                // Outside of battle, ALWAYS force Player Control so heroes can move and be selected in exploration!
+                if (!isInBattle || choice <= 0)
                 {
-                    // Human / Player Control
                     character.ControllerId = PlayerControllerManager.MainPlayerControllerId;
                 }
                 else
                 {
-                    // AI / DM Computer Control (Controller ID = 4242)
+                    // AI / DM Computer Control (Controller ID = 4242) only during combat
                     character.ControllerId = PlayerControllerManager.DmControllerId;
 
                     var decisionPackageDb = DatabaseRepository.GetDatabase<TA.AI.DecisionPackageDefinition>();
@@ -453,6 +499,26 @@ namespace SolastaAI
             catch (Exception ex)
             {
                 ModEntry?.Logger.Error($"[SolastaAI] Error saving choices: {ex}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Harmony Patch on GameLocationBattleManager.EndBattle to guarantee all party members revert to Player Control after combat ends.
+    /// </summary>
+    [HarmonyPatch(typeof(GameLocationBattleManager), "EndBattle")]
+    public static class GameLocationBattleManager_EndBattle_Patch
+    {
+        public static void Postfix()
+        {
+            try
+            {
+                Main.EnsureExplorationControl();
+                Main.ModEntry?.Logger.Log("[SolastaAI] Combat ended. All party members restored to Player Control.");
+            }
+            catch (Exception ex)
+            {
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in EndBattle Postfix: {ex}");
             }
         }
     }
