@@ -45,6 +45,11 @@ namespace SolastaAI
         public bool EnableFighterTactics = true;
 
         /// <summary>
+        /// Enables Druid class skill automation (Wild Shape / Tiergestalt & support casting).
+        /// </summary>
+        public bool EnableDruidTactics = true;
+
+        /// <summary>
         /// Enables Opportunity Attack protection for Ranged Fighters (eliminating adjacent threats in melee first).
         /// </summary>
         public bool EnableAvoidOpportunityAttacks = true;
@@ -76,10 +81,11 @@ namespace SolastaAI
         /// 2 = AI: Range (Backup Melee)
         /// 3 = AI: Caster (Backup Attacks)
         /// 4 = AI: Cleric Combat
-        /// 5 = AI: Fighter (Melee)
-        /// 6 = AI: Fighter (Ranged / Archer)
-        /// 7 = AI: Mage Combat
-        /// 8 = AI: Rogue Combat
+        /// 5 = AI: Druid Combat
+        /// 6 = AI: Fighter (Melee)
+        /// 7 = AI: Fighter (Ranged / Archer)
+        /// 8 = AI: Mage Combat
+        /// 9 = AI: Rogue Combat
         /// </summary>
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -98,6 +104,7 @@ namespace SolastaAI
             "AI: Range (Backup Melee)",
             "AI: Caster (Backup Attacks)",
             "AI: Cleric Combat",
+            "AI: Druid Combat",
             "AI: Fighter (Melee)",
             "AI: Fighter (Ranged)",
             "AI: Mage Combat",
@@ -193,7 +200,7 @@ namespace SolastaAI
                     }
 
                     string displayName = character.RulesetCharacter != null ? character.RulesetCharacter.Name : name;
-                    string currentArchetypeName = AIPackageNames[currentChoice];
+                    string currentArchetypeName = (currentChoice >= 0 && currentChoice < AIPackageNames.Length) ? AIPackageNames[currentChoice] : AIPackageNames[0];
 
                     GUILayout.BeginVertical("box");
 
@@ -228,7 +235,24 @@ namespace SolastaAI
                     }
 
                     // 3. DYNAMIC SUB-SETTINGS (Displayed below dropdown based on selected mode!)
-                    if (currentChoice == 5 || currentChoice == 6) // Fighter (Melee) or Fighter (Ranged)
+                    if (currentChoice == 5) // Druid Combat
+                    {
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+
+                        ModSettings.EnableDruidTactics = GUILayout.Toggle(
+                            ModSettings.EnableDruidTactics,
+                            "   └─ <b>Use Wild Shape & Support Automation</b> (Automatic Wild Shape / Tiergestalt & healing support)"
+                        );
+
+                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
+                            ModSettings.EnableAutoWeaponSwap,
+                            "   └─ <b>Auto-Weapon Swap</b> (Equip ranged weapons when targets are out of reach)"
+                        );
+
+                        GUILayout.EndVertical();
+                    }
+                    else if (currentChoice == 6 || currentChoice == 7) // Fighter (Melee) or Fighter (Ranged)
                     {
                         GUILayout.BeginVertical("box");
                         GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
@@ -238,7 +262,7 @@ namespace SolastaAI
                             "   └─ <b>Use Second Wind & Action Surge</b> (Automatic heal on low HP & extra actions)"
                         );
 
-                        if (currentChoice == 6) // Fighter (Ranged)
+                        if (currentChoice == 7) // Fighter (Ranged)
                         {
                             ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
                                 ModSettings.EnableAvoidOpportunityAttacks,
@@ -432,10 +456,11 @@ namespace SolastaAI
                             case 2: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
-                            case 5: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
-                            case 6: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
-                            case 7: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
-                            case 8: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
+                            case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid Combat
+                            case 6: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
+                            case 7: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
+                            case 8: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
+                            case 9: package = decisionPackageDb.GetElement("RogueCombatDecisions", true); break;
                             default: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
@@ -510,6 +535,41 @@ namespace SolastaAI
             catch (Exception ex)
             {
                 ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteFighterTactics for {character?.Name}: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Executes Druid class tactical skills (Wild Shape / Tiergestalt & Support Spells).
+        /// </summary>
+        public static void ExecuteDruidTactics(GameLocationCharacter character)
+        {
+            try
+            {
+                if (!ModSettings.EnableDruidTactics || character == null || character.RulesetCharacter == null) return;
+                
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null || hero.UsablePowers == null) return;
+
+                int currentHp = hero.CurrentHitPoints;
+                int maxHp = currentHp + hero.MissingHitPoints;
+
+                // 1. Wild Shape / Tiergestalt trigger when HP < 75%
+                var wildShapePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                    (p.PowerDefinition.Name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     p.PowerDefinition.Name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                if (wildShapePower != null && hero.GetRemainingUsesOfPower(wildShapePower) > 0 && maxHp > 0 && ((float)currentHp / maxHp * 100f) < 75f)
+                {
+                    hero.UsePower(wildShapePower);
+                    ModEntry?.Logger.Log($"[SolastaAI] Druid Skill: {character.Name} activated Wild Shape / Tiergestalt! (HP: {currentHp}/{maxHp})");
+                }
+
+                // 2. Auto-Weapon Swap for Druids
+                CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteDruidTactics for {character?.Name}: {ex}");
             }
         }
 
@@ -746,12 +806,16 @@ namespace SolastaAI
                 {
                     Main.ApplyAIController(__instance, choice);
 
-                    // If AI control is active, check and execute Fighter Tactics or auto-weapon swap
+                    // If AI control is active, check and execute Class Tactics or auto-weapon swap
                     if (choice == 5)
+                    {
+                        Main.ExecuteDruidTactics(__instance);
+                    }
+                    else if (choice == 6)
                     {
                         Main.ExecuteFighterTactics(__instance, isRangedArchetype: false);
                     }
-                    else if (choice == 6)
+                    else if (choice == 7)
                     {
                         Main.ExecuteFighterTactics(__instance, isRangedArchetype: true);
                     }
