@@ -39,25 +39,42 @@ namespace SolastaAI
         /// </summary>
         public bool EnableAutoWeaponSwap = true;
 
+        // --- GRANULAR FIGHTER SKILL TOGGLES ---
         /// <summary>
-        /// Enables Fighter class skill automation (Second Wind / Durchschnaufen, Action Surge / Tatendrank).
+        /// Enables Second Wind / Durchschnaufen automation.
         /// </summary>
-        public bool EnableFighterTactics = true;
+        public bool EnableFighterSecondWind = true;
 
         /// <summary>
-        /// Enables Druid class skill automation (Wild Shape / Tiergestalt & support casting).
+        /// Enables Action Surge / Tatendrank automation.
         /// </summary>
-        public bool EnableDruidTactics = true;
+        public bool EnableFighterActionSurge = true;
+
+        /// <summary>
+        /// Enables Opportunity Attack protection for Ranged Fighters.
+        /// </summary>
+        public bool EnableAvoidOpportunityAttacks = true;
+
+        // --- GRANULAR DRUID SKILL TOGGLES ---
+        /// <summary>
+        /// Enables Wild Shape / Tiergestalt transformation.
+        /// </summary>
+        public bool EnableDruidWildShape = true;
+
+        /// <summary>
+        /// Enables Shillelagh / Zauberstock weapon enchantment.
+        /// </summary>
+        public bool EnableDruidShillelagh = true;
+
+        /// <summary>
+        /// Enables Guidance / Göttliche Führung self-buff when out of melee reach.
+        /// </summary>
+        public bool EnableDruidGuidance = true;
 
         /// <summary>
         /// Enables healing support for wounded allies by Druid spellcasters.
         /// </summary>
         public bool EnableDruidHealing = true;
-
-        /// <summary>
-        /// Enables Opportunity Attack protection for Ranged Fighters (eliminating adjacent threats in melee first).
-        /// </summary>
-        public bool EnableAvoidOpportunityAttacks = true;
 
         /// <summary>
         /// Automatically applies AI control for guest/companion characters.
@@ -190,7 +207,7 @@ namespace SolastaAI
 
             // --- SECTION 2: PARTY CHARACTER ARCHETYPE DROPDOWNS & DYNAMIC SUB-SETTINGS ---
             GUILayout.BeginVertical("box");
-            GUILayout.Label("<b>👥 Party Character AI Archetype Selection & Mode Settings</b>");
+            GUILayout.Label("<b>👥 Party Character AI Archetype Selection & Skill Settings</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
             if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
@@ -241,20 +258,20 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    // 3. DYNAMIC SUB-SETTINGS (Displayed below dropdown based on selected mode!)
+                    // 3. DYNAMIC GRANULAR SKILL SETTINGS (Displayed below dropdown based on selected mode!)
                     if (currentChoice == 5) // Druid (Wild Shape)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
 
-                        ModSettings.EnableDruidTactics = GUILayout.Toggle(
-                            ModSettings.EnableDruidTactics,
-                            "   └─ <b>Use Wild Shape Automation</b> (Automatic Wild Shape / Tiergestalt when threatened)"
+                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(
+                            ModSettings.EnableDruidWildShape,
+                            "   └─ <b>Use Wild Shape / Tiergestalt</b> (Transform when threatened or HP < 75%)"
                         );
 
                         ModSettings.EnableDruidHealing = GUILayout.Toggle(
                             ModSettings.EnableDruidHealing,
-                            "   └─ <b>Enable Ally Healing Support</b> (Automatically heal wounded allies when HP < 50%)"
+                            "   └─ <b>Use Ally Healing Spells</b> (Automatically heal wounded allies when HP < 50%)"
                         );
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
@@ -267,21 +284,26 @@ namespace SolastaAI
                     else if (currentChoice == 6) // Druid (Shillelagh Melee)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
 
-                        ModSettings.EnableDruidTactics = GUILayout.Toggle(
-                            ModSettings.EnableDruidTactics,
-                            "   └─ <b>Use Shillelagh Melee Tactics</b> (Cast Shillelagh on weapon & engage in melee without transforming)"
+                        ModSettings.EnableDruidShillelagh = GUILayout.Toggle(
+                            ModSettings.EnableDruidShillelagh,
+                            "   └─ <b>Use Shillelagh / Zauberstock</b> (Enchant melee weapon at turn start)"
+                        );
+
+                        ModSettings.EnableDruidGuidance = GUILayout.Toggle(
+                            ModSettings.EnableDruidGuidance,
+                            "   └─ <b>Use Guidance / Göttliche Führung</b> (Cast self-buff when out of melee reach)"
                         );
 
                         ModSettings.EnableDruidHealing = GUILayout.Toggle(
                             ModSettings.EnableDruidHealing,
-                            "   └─ <b>Enable Ally Healing Support</b> (Automatically heal wounded allies when HP < 50%)"
+                            "   └─ <b>Use Ally Healing Spells</b> (Automatically heal wounded allies when HP < 50%)"
                         );
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                             ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Use Guidance / Ranged Cantrip when out of Melee reach</b>"
+                            "   └─ <b>Auto-Weapon Swap / Ranged Cantrips</b> (Use cantrips/ranged weapons when out of reach)"
                         );
 
                         GUILayout.EndVertical();
@@ -289,11 +311,16 @@ namespace SolastaAI
                     else if (currentChoice == 7 || currentChoice == 8) // Fighter (Melee) or Fighter (Ranged)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
 
-                        ModSettings.EnableFighterTactics = GUILayout.Toggle(
-                            ModSettings.EnableFighterTactics,
-                            "   └─ <b>Use Second Wind & Action Surge</b> (Automatic heal on low HP & extra actions)"
+                        ModSettings.EnableFighterSecondWind = GUILayout.Toggle(
+                            ModSettings.EnableFighterSecondWind,
+                            "   └─ <b>Use Second Wind / Durchschnaufen</b> (Self-heal when HP < 60%)"
+                        );
+
+                        ModSettings.EnableFighterActionSurge = GUILayout.Toggle(
+                            ModSettings.EnableFighterActionSurge,
+                            "   └─ <b>Use Action Surge / Tatendrank</b> (Grant extra actions during combat)"
                         );
 
                         if (currentChoice == 8) // Fighter (Ranged)
@@ -314,7 +341,7 @@ namespace SolastaAI
                     else if (currentChoice > 0)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Mode Settings for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                             ModSettings.EnableAutoWeaponSwap,
@@ -525,43 +552,49 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank) and handles archetype-specific weapon positioning.
+        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank) based on individual toggles.
         /// </summary>
         public static void ExecuteFighterTactics(GameLocationCharacter character, bool isRangedArchetype)
         {
             try
             {
-                if (!ModSettings.EnableFighterTactics || character == null || character.RulesetCharacter == null) return;
+                if (character == null || character.RulesetCharacter == null) return;
                 
                 var hero = character.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null || hero.UsablePowers == null) return;
 
-                // 1. Second Wind / Durchschnaufen (PowerFighterSecondWind) trigger when HP < 60%
-                int currentHp = hero.CurrentHitPoints;
-                int maxHp = currentHp + hero.MissingHitPoints;
-                if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
+                // 1. Second Wind / Durchschnaufen (PowerFighterSecondWind) trigger when HP < 60% (if toggle enabled)
+                if (ModSettings.EnableFighterSecondWind)
                 {
-                    var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
-                        (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                         p.PowerDefinition.Name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                         p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                    if (secondWindPower != null && hero.GetRemainingUsesOfPower(secondWindPower) > 0)
+                    int currentHp = hero.CurrentHitPoints;
+                    int maxHp = currentHp + hero.MissingHitPoints;
+                    if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
                     {
-                        hero.UsePower(secondWindPower);
-                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind / Durchschnaufen! (HP: {currentHp}/{maxHp})");
+                        var secondWindPower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                            (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             p.PowerDefinition.Name.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                        if (secondWindPower != null && hero.GetRemainingUsesOfPower(secondWindPower) > 0)
+                        {
+                            hero.UsePower(secondWindPower);
+                            ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} used Second Wind / Durchschnaufen! (HP: {currentHp}/{maxHp})");
+                        }
                     }
                 }
 
-                // 2. Action Surge / Tatendrank (PowerFighterActionSurge) trigger in combat
-                var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
-                    (p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     p.PowerDefinition.Name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                if (actionSurgePower != null && hero.GetRemainingUsesOfPower(actionSurgePower) > 0)
+                // 2. Action Surge / Tatendrank (PowerFighterActionSurge) trigger in combat (if toggle enabled)
+                if (ModSettings.EnableFighterActionSurge)
                 {
-                    hero.UsePower(actionSurgePower);
-                    ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge / Tatendrank!");
+                    var actionSurgePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                        (p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         p.PowerDefinition.Name.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                    if (actionSurgePower != null && hero.GetRemainingUsesOfPower(actionSurgePower) > 0)
+                    {
+                        hero.UsePower(actionSurgePower);
+                        ModEntry?.Logger.Log($"[SolastaAI] Fighter Skill: {character.Name} activated Action Surge / Tatendrank!");
+                    }
                 }
 
                 // 3. Auto-Weapon Swap tailored specifically to Fighter archetype (Melee vs Ranged)
@@ -574,32 +607,35 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Executes Druid class tactical skills (Wild Shape / Tiergestalt & Support Spells).
+        /// Executes Druid Wild Shape tactics (Wild Shape / Tiergestalt & Support Spells) based on individual toggles.
         /// </summary>
         public static void ExecuteDruidTactics(GameLocationCharacter character)
         {
             try
             {
-                if (!ModSettings.EnableDruidTactics || character == null || character.RulesetCharacter == null) return;
+                if (character == null || character.RulesetCharacter == null) return;
                 
                 var hero = character.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null || hero.UsablePowers == null) return;
 
-                int currentHp = hero.CurrentHitPoints;
-                int maxHp = currentHp + hero.MissingHitPoints;
-
-                // 1. Wild Shape / Tiergestalt trigger when HP < 75%
-                var wildShapePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
-                    (p.PowerDefinition.Name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     p.PowerDefinition.Name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                if (wildShapePower != null && hero.GetRemainingUsesOfPower(wildShapePower) > 0 && maxHp > 0 && ((float)currentHp / maxHp * 100f) < 75f)
+                // 1. Wild Shape / Tiergestalt trigger when HP < 75% (if toggle enabled)
+                if (ModSettings.EnableDruidWildShape)
                 {
-                    hero.UsePower(wildShapePower);
-                    ModEntry?.Logger.Log($"[SolastaAI] Druid Skill: {character.Name} activated Wild Shape / Tiergestalt! (HP: {currentHp}/{maxHp})");
+                    int currentHp = hero.CurrentHitPoints;
+                    int maxHp = currentHp + hero.MissingHitPoints;
+
+                    var wildShapePower = hero.UsablePowers.Find(p => p.PowerDefinition != null && 
+                        (p.PowerDefinition.Name.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         p.PowerDefinition.Name.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                    if (wildShapePower != null && hero.GetRemainingUsesOfPower(wildShapePower) > 0 && maxHp > 0 && ((float)currentHp / maxHp * 100f) < 75f)
+                    {
+                        hero.UsePower(wildShapePower);
+                        ModEntry?.Logger.Log($"[SolastaAI] Druid Skill: {character.Name} activated Wild Shape / Tiergestalt! (HP: {currentHp}/{maxHp})");
+                    }
                 }
 
-                // 2. Ally Healing Check (if enabled)
+                // 2. Ally Healing Check (if toggle enabled)
                 if (ModSettings.EnableDruidHealing)
                 {
                     CheckAndHealAllies(character);
@@ -615,19 +651,19 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Executes Shillelagh Druid Melee tactics: casts Shillelagh, heals allies if needed, uses Guidance if out of range, or attacks in melee without transforming.
+        /// Executes Shillelagh Druid Melee tactics based on individual toggles.
         /// </summary>
         public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
         {
             try
             {
-                if (!ModSettings.EnableDruidTactics || character == null || character.RulesetCharacter == null) return;
+                if (character == null || character.RulesetCharacter == null) return;
                 
                 var hero = character.RulesetCharacter as RulesetCharacterHero;
                 if (hero == null) return;
 
-                // 1. Cast Shillelagh on melee weapon if known and available
-                if (hero.SpellRepertoires != null)
+                // 1. Cast Shillelagh on melee weapon if enabled & available
+                if (ModSettings.EnableDruidShillelagh && hero.SpellRepertoires != null)
                 {
                     foreach (var repertoire in hero.SpellRepertoires)
                     {
@@ -644,7 +680,7 @@ namespace SolastaAI
                     }
                 }
 
-                // 2. Ally Healing Check (if enabled)
+                // 2. Ally Healing Check (if toggle enabled)
                 if (ModSettings.EnableDruidHealing)
                 {
                     CheckAndHealAllies(character);
@@ -681,7 +717,7 @@ namespace SolastaAI
                     if (minDistance > 2)
                     {
                         bool castGuidance = false;
-                        if (hero.SpellRepertoires != null)
+                        if (ModSettings.EnableDruidGuidance && hero.SpellRepertoires != null)
                         {
                             foreach (var repertoire in hero.SpellRepertoires)
                             {

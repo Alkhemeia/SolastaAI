@@ -1,44 +1,49 @@
 # SolastaAI
 
-A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, Fighter & Druid class automation, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
+A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** that provides full AI control management, tactical behavior selection, Fighter & Druid class automation with granular skill controls, emergency safety rules, automatic weapon swapping, and persistent character AI settings.
 
 ## 🌟 Key Features
 
 1. **Complete Independence & Update-Safety:**
    - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
-2. **Structured Dropdown UI & Dynamic Mode Settings:**
+2. **Structured Dropdown UI & Granular Skill Toggles:**
    - Convenient **Dropdown Selector** per hero e.g. `[ AI: Druid (Shillelagh) ▼ ]`.
-   - Displays **dynamic sub-settings** directly below each hero based on their chosen AI mode.
+   - **Granular Skill Controls:** Every single skill used by Fighter and Druid modes can be toggled on or off individually right under each hero's dropdown!
    - Archetypes available per hero:
      - `Human (Player Control)`
      - `AI: Melee (Default)`
      - `AI: Range (Backup Melee)`
      - `AI: Caster (Backup Attacks)`
      - `AI: Cleric Combat`
-     - `AI: Druid (Wild Shape)` - Focused on support spellcasting and Tiergestalt (Wild Shape).
-     - `AI: Druid (Shillelagh)` - Focused on melee combat with Shillelagh, self-buffing with Guidance, and optional ally healing.
-     - `AI: Fighter (Melee)` - Focused on frontline melee aggression with automatic weapon swap.
-     - `AI: Fighter (Ranged)` - Focused on ranged archery positioning and opportunity attack prevention.
+     - `AI: Druid (Wild Shape)` - Support spellcasting and Tiergestalt (Wild Shape).
+     - `AI: Druid (Shillelagh)` - Melee combat with Shillelagh, self-buffing with Guidance, cantrips, and ally healing.
+     - `AI: Fighter (Melee)` - Frontline melee aggression with automatic weapon swap.
+     - `AI: Fighter (Ranged)` - Ranged archery positioning and opportunity attack prevention.
      - `AI: Mage Combat`
      - `AI: Rogue Combat`
-3. **Shillelagh Druid Melee Automation:**
-   - **Shillelagh / Zauberstock:** Automatically casts Shillelagh on the primary melee weapon (no Wild Shape transformation!).
-   - **Guidance / Göttliche Führung:** When out of melee reach ($> 2$ cells), casts Guidance on self while advancing towards target.
-   - **Ranged Cantrips:** Uses ranged cantrips (Produce Flame, etc.) if Guidance is absent or out of melee reach.
-   - **Toggleable Ally Healing:** Automatically heals wounded allies ($< 50\%$ HP) if healing toggle is enabled in settings.
-4. **Fighter Class Automation:**
-   - **Second Wind / Durchschnaufen:** Automatically triggered when HP drops below **60%**.
-   - **Action Surge / Tatendrank:** Automatically activated during combat for extra actions.
-5. **Toggleable Opportunity Attack Protection:**
-   - When enabled, Ranged Fighters will automatically equip melee weapons to defeat adjacent enemies first, preventing opportunity attacks.
-6. **Automatic Weapon Swapping:**
+3. **Granular Skill Controls Per Mode:**
+   - **Fighter Modes:**
+     - `[x] Use Second Wind / Durchschnaufen`
+     - `[x] Use Action Surge / Tatendrank`
+     - `[x] Avoid Opportunity Attacks` (For Ranged Fighters)
+     - `[x] Auto-Weapon Swap`
+   - **Druid (Wild Shape) Mode:**
+     - `[x] Use Wild Shape / Tiergestalt`
+     - `[x] Use Ally Healing Spells`
+     - `[x] Auto-Weapon Swap`
+   - **Druid (Shillelagh) Mode:**
+     - `[x] Use Shillelagh / Zauberstock`
+     - `[x] Use Guidance / Göttliche Führung`
+     - `[x] Use Ally Healing Spells`
+     - `[x] Auto-Weapon Swap / Ranged Cantrips`
+4. **Automatic Weapon Swapping:**
    - Automatically evaluates tactical grid distances during a character's turn.
-7. **Emergency Low HP Protection:**
+5. **Emergency Low HP Protection:**
    - Automatically switches hero control back to the player if their hit points drop below a configurable threshold (5% - 50% Max HP, default: **30%**).
-8. **In-Combat Quick Hotkey (`N`):**
+6. **In-Combat Quick Hotkey (`N`):**
    - Press **`N`** during combat to instantly toggle AI / Manual control for the currently active turn character.
-9. **Persistent Storage:**
+7. **Persistent Storage:**
    - Remembers choices automatically across map transitions, battle start/stop, and save game reloads via `SavedAIControllers.json`.
 
 ---
