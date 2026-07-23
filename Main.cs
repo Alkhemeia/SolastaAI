@@ -546,18 +546,18 @@ namespace SolastaAI
     }
 
     /// <summary>
-    /// Harmony Patch on GameLocationCharacter.StartBattleTurn to apply AI controllers, emergency low HP fallback, and auto weapon swapping.
+    /// Harmony Patch on GameLocationCharacter.StartBattleTurn as a PREFIX so ControllerId and DecisionPackage are configured BEFORE turn initialization.
     /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
     public static class GameLocationCharacter_StartBattleTurn_Patch
     {
-        public static void Postfix(GameLocationCharacter __instance)
+        public static bool Prefix(GameLocationCharacter __instance)
         {
             try
             {
-                if (__instance == null) return;
+                if (__instance == null) return true;
                 string name = __instance.Name;
-                if (string.IsNullOrEmpty(name)) return;
+                if (string.IsNullOrEmpty(name)) return true;
 
                 // Check Emergency Low HP Fallback (only if enabled)
                 if (Main.ModSettings.EnableEmergencyLowHpFallback && __instance.RulesetCharacter != null)
@@ -568,11 +568,11 @@ namespace SolastaAI
                     {
                         Main.ModEntry?.Logger.Log($"[SolastaAI] Emergency Fallback triggered for {name} (HP: {currentHp}/{maxHp}). Switching to Human Control!");
                         Main.ApplyAIController(__instance, 0);
-                        return;
+                        return true;
                     }
                 }
 
-                // Apply saved AI choice
+                // Apply saved AI choice BEFORE StartBattleTurn body executes!
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice))
                 {
                     Main.ApplyAIController(__instance, choice);
@@ -586,8 +586,9 @@ namespace SolastaAI
             }
             catch (Exception ex)
             {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in StartBattleTurn Postfix: {ex}");
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Error in StartBattleTurn Prefix: {ex}");
             }
+            return true;
         }
     }
 
