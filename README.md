@@ -51,7 +51,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
 
 ## 🛠️ Installation
 
-1. Download the latest release `SolastaAI-v1.2.<version>.zip`.
+1. Download the latest release `Releases/SolastaAI-v1.2.<version>.zip`.
 2. Install via Unity Mod Manager or extract the `SolastaAI` folder into your Solasta `Mods` directory:
    ```text
    <Solasta Installation Directory>/Mods/SolastaAI/
