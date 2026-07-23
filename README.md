@@ -17,7 +17,7 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Caster (Backup Attacks)`
      - `AI: Cleric Combat`
      - `AI: Druid (Wild Shape)` - Support spellcasting and Tiergestalt (Wild Shape).
-     - `AI: Druid (Shillelagh)` - Melee combat with Shillelagh, self-buffing with Guidance, cantrips, and ally healing.
+     - `AI: Druid (Shillelagh)` - Melee combat with Shillelagh, self-buffing with Guidance, cantrips, poison protection, and ally healing.
      - `AI: Fighter (Melee)` - Frontline melee aggression with automatic weapon swap.
      - `AI: Fighter (Ranged)` - Ranged archery positioning and opportunity attack prevention.
      - `AI: Mage Combat`
@@ -30,13 +30,17 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `[x] Auto-Weapon Swap`
    - **Druid (Wild Shape) Mode:**
      - `[x] Use Wild Shape / Tiergestalt`
+     - `[x] Use Protection from Poison / Schutz vor Gift`
+     - `[x] Use General Buff & Utility Spells`
      - `[x] Use Ally Healing Spells`
      - `[x] Auto-Weapon Swap`
    - **Druid (Shillelagh) Mode:**
      - `[x] Use Shillelagh / Zauberstock`
      - `[x] Use Guidance / Göttliche Führung`
+     - `[x] Use Protection from Poison / Schutz vor Gift`
+     - `[x] Use General Buff & Utility Spells`
      - `[x] Use Ally Healing Spells`
-     - `[x] Auto-Weapon Swap / Ranged Cantrips`
+     - `[x] Advance Towards Target + Ranged Cantrips`
 4. **Automatic Weapon Swapping:**
    - Automatically evaluates tactical grid distances during a character's turn.
 5. **Emergency Low HP Protection:**

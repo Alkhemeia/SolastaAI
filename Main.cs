@@ -77,6 +77,16 @@ namespace SolastaAI
         public bool EnableDruidHealing = true;
 
         /// <summary>
+        /// Enables Protection from Poison / Schutz vor Gift spell usage on allies.
+        /// </summary>
+        public bool EnableDruidProtectionFromPoison = true;
+
+        /// <summary>
+        /// Enables general buff & utility spellcasting for Druids.
+        /// </summary>
+        public bool EnableDruidBuffSpells = true;
+
+        /// <summary>
         /// Automatically applies AI control for guest/companion characters.
         /// </summary>
         public bool AutoControlGuests = false;
@@ -269,6 +279,16 @@ namespace SolastaAI
                             "   └─ <b>Use Wild Shape / Tiergestalt</b> (Transform when threatened or HP < 75%)"
                         );
 
+                        ModSettings.EnableDruidProtectionFromPoison = GUILayout.Toggle(
+                            ModSettings.EnableDruidProtectionFromPoison,
+                            "   └─ <b>Use Protection from Poison / Schutz vor Gift</b> (Casts poison protection on poisoned allies)"
+                        );
+
+                        ModSettings.EnableDruidBuffSpells = GUILayout.Toggle(
+                            ModSettings.EnableDruidBuffSpells,
+                            "   └─ <b>Use General Buff & Utility Spells</b> (Casts buff and utility spells during combat)"
+                        );
+
                         ModSettings.EnableDruidHealing = GUILayout.Toggle(
                             ModSettings.EnableDruidHealing,
                             "   └─ <b>Use Ally Healing Spells</b> (Automatically heal wounded allies when HP < 50%)"
@@ -294,6 +314,16 @@ namespace SolastaAI
                         ModSettings.EnableDruidGuidance = GUILayout.Toggle(
                             ModSettings.EnableDruidGuidance,
                             "   └─ <b>Use Guidance / Göttliche Führung</b> (Cast self-buff when out of melee reach)"
+                        );
+
+                        ModSettings.EnableDruidProtectionFromPoison = GUILayout.Toggle(
+                            ModSettings.EnableDruidProtectionFromPoison,
+                            "   └─ <b>Use Protection from Poison / Schutz vor Gift</b> (Casts poison protection on poisoned allies)"
+                        );
+
+                        ModSettings.EnableDruidBuffSpells = GUILayout.Toggle(
+                            ModSettings.EnableDruidBuffSpells,
+                            "   └─ <b>Use General Buff & Utility Spells</b> (Casts buff and utility spells during combat)"
                         );
 
                         ModSettings.EnableDruidHealing = GUILayout.Toggle(
@@ -635,13 +665,19 @@ namespace SolastaAI
                     }
                 }
 
-                // 2. Ally Healing Check (if toggle enabled)
+                // 2. Check Protection from Poison (if toggle enabled)
+                if (ModSettings.EnableDruidProtectionFromPoison)
+                {
+                    CheckAndCastProtectionFromPoison(character);
+                }
+
+                // 3. Ally Healing Check (if toggle enabled)
                 if (ModSettings.EnableDruidHealing)
                 {
                     CheckAndHealAllies(character);
                 }
 
-                // 3. Auto-Weapon Swap for Druids
+                // 4. Auto-Weapon Swap for Druids
                 CheckAndAutoSwapWeapons(character, isRangedArchetype: false);
             }
             catch (Exception ex)
@@ -690,13 +726,19 @@ namespace SolastaAI
                     }
                 }
 
-                // 2. Ally Healing Check (if toggle enabled)
+                // 2. Check Protection from Poison (if toggle enabled)
+                if (ModSettings.EnableDruidProtectionFromPoison)
+                {
+                    CheckAndCastProtectionFromPoison(character);
+                }
+
+                // 3. Ally Healing Check (if toggle enabled)
                 if (ModSettings.EnableDruidHealing)
                 {
                     CheckAndHealAllies(character);
                 }
 
-                // 3. Enemy Distance & Guidance / Ranged Cantrip Advance Check
+                // 4. Enemy Distance & Guidance / Ranged Cantrip Advance Check
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
                 if (battleService != null && battleService.IsBattleInProgress && battleService.Battle != null)
                 {
@@ -771,6 +813,61 @@ namespace SolastaAI
             catch (Exception ex)
             {
                 ModEntry?.Logger.Error($"[SolastaAI] Error in ExecuteShillelaghDruidTactics for {character?.Name}: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Checks party members for poison condition and casts Protection from Poison / Schutz vor Gift if enabled & available.
+        /// </summary>
+        public static void CheckAndCastProtectionFromPoison(GameLocationCharacter character)
+        {
+            try
+            {
+                if (!ModSettings.EnableDruidProtectionFromPoison || character == null || character.RulesetCharacter == null) return;
+
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null || hero.SpellRepertoires == null) return;
+
+                var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
+                if (charService == null || charService.PartyCharacters == null) return;
+
+                foreach (var ally in charService.PartyCharacters)
+                {
+                    if (ally == null || ally.RulesetCharacter == null || ally.RulesetCharacter.IsDeadOrDyingOrUnconsciousWithNoHealth)
+                        continue;
+
+                    bool isPoisoned = ally.RulesetCharacter.HasConditionOfType("ConditionPoisoned");
+                    if (isPoisoned)
+                    {
+                        foreach (var repertoire in hero.SpellRepertoires)
+                        {
+                            if (repertoire == null) continue;
+                            var poisonSpell = repertoire.PreparedSpells.Find(s => s != null && 
+                                (s.Name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 s.Name.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 s.Name.IndexOf("Poison", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                            if (poisonSpell != null && repertoire.CanCastSpell(poisonSpell, true))
+                            {
+                                var implService = ServiceRepository.GetService<IRulesetImplementationService>();
+                                if (implService != null)
+                                {
+                                    var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, poisonSpell, 2, false);
+                                    if (effectSpell != null)
+                                    {
+                                        hero.CastSpell(effectSpell, false, false);
+                                        ModEntry?.Logger.Log($"[SolastaAI] Druid Protection: {character.Name} cast Protection from Poison on {ally.Name}!");
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ModEntry?.Logger.Error($"[SolastaAI] Error in CheckAndCastProtectionFromPoison: {ex}");
             }
         }
 
