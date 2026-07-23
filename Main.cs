@@ -629,33 +629,34 @@ namespace SolastaAI
             try
             {
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
-                if (hero?.UsablePowers == null) return;
-
-                if (ModSettings.EnableFighterSecondWind && IsPowerEnabledForAI("SecondWind"))
+                if (hero != null && hero.UsablePowers != null)
                 {
-                    int currentHp = hero.CurrentHitPoints;
-                    int maxHp = currentHp + hero.MissingHitPoints;
-                    if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
+                    if (ModSettings.EnableFighterSecondWind && IsPowerEnabledForAI("SecondWind"))
+                    {
+                        int currentHp = hero.CurrentHitPoints;
+                        int maxHp = currentHp + hero.MissingHitPoints;
+                        if (maxHp > 0 && ((float)currentHp / maxHp * 100f) < 60f)
+                        {
+                            var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
+                                (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
+                            if (power != null && hero.GetRemainingUsesOfPower(power) > 0)
+                            {
+                                hero.UsePower(power);
+                                ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Second Wind!");
+                            }
+                        }
+                    }
+
+                    if (ModSettings.EnableFighterActionSurge && IsPowerEnabledForAI("ActionSurge"))
                     {
                         var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
-                            (p.PowerDefinition.Name.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                             p.PowerDefinition.Name.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0));
+                            p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0);
                         if (power != null && hero.GetRemainingUsesOfPower(power) > 0)
                         {
                             hero.UsePower(power);
-                            ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Second Wind!");
+                            ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Action Surge!");
                         }
-                    }
-                }
-
-                if (ModSettings.EnableFighterActionSurge && IsPowerEnabledForAI("ActionSurge"))
-                {
-                    var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
-                        p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0);
-                    if (power != null && hero.GetRemainingUsesOfPower(power) > 0)
-                    {
-                        hero.UsePower(power);
-                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used Action Surge!");
                     }
                 }
 
@@ -810,8 +811,9 @@ namespace SolastaAI
                     return;
                 }
 
-                // Melee Fighter logic: check if any enemy can be reached within movement range (6 cells walk)
-                int maxReachableDist = 6;
+                // Melee Fighter logic: if no enemy is in immediate melee reach (<= 2 cells) and holding melee weapon,
+                // switch to ranged weapon set so the fighter can shoot while advancing!
+                int maxReachableDist = 2;
 
                 // If nearest enemy is farther than 6 cells (out of 1-turn melee reach) and we are currently holding melee weapon:
                 // Switch to ranged weapon so the fighter can shoot while advancing!
