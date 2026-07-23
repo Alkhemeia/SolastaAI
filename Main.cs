@@ -34,6 +34,7 @@ namespace SolastaAI
         public bool EnableSpellProduceFlame = true;
         public bool EnableSpellThornWhip = true;
         public bool EnableSpellPoisonSpray = true;
+        public bool EnableSpellChillTouch = true;
         public bool EnableSpellCureWounds = true;
         public bool EnableSpellHealingWord = true;
         public bool EnableSpellEntangle = true;
@@ -154,6 +155,8 @@ namespace SolastaAI
                 if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                if (spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 // Also block support/buff spells the AI might self-cast instead of advancing
                 if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0) return false;
                 if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0) return false;
@@ -170,6 +173,8 @@ namespace SolastaAI
                 return ModSettings.EnableSpellThornWhip;
             if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0)
                 return ModSettings.EnableSpellPoisonSpray;
+            if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0)
+                return ModSettings.EnableSpellChillTouch;
             if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
                 return ModSettings.EnableSpellCureWounds;
             if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -343,6 +348,7 @@ namespace SolastaAI
                         ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "     └─ <b>Produce Flame</b>");
                         ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "     └─ <b>Thorn Whip</b>");
                         ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "     └─ <b>Poison Spray</b>");
+                        ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "     └─ <b>Chill Touch / Kalte Hand</b>");
                         ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "     └─ <b>Entangle</b>");
                         ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "     └─ <b>Faerie Fire</b>");
                         ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "     └─ <b>Flaming Sphere</b>");
@@ -1007,6 +1013,7 @@ namespace SolastaAI
                         if (name.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellProduceFlame) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
                         if (name.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellThornWhip) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
                         if (name.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0 && !Main.ModSettings.EnableSpellPoisonSpray) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
+                        if ((name.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0) && !Main.ModSettings.EnableSpellChillTouch) { Main.ModEntry?.Logger.Log($"[SolastaAI] CastSpell blocked (disabled): {name}"); return false; }
                     }
                     if (!Main.IsSpellEnabledForAI(name) && mode != Main.MODE_DRUID_SHILLELAGH)
                     {
