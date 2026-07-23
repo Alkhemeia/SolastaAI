@@ -76,12 +76,29 @@ namespace SolastaAIPersistence
             GUILayout.BeginVertical("box");
             GUILayout.Label("<b>Solasta AI & AI Persistence Settings</b>", GUILayout.ExpandWidth(true));
             
-            ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(ModSettings.EnableEmergencyLowHpFallback, " Enable Emergency Revert to Human Control on Low HP (< 30%)");
-            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(ModSettings.EnableHotkeyToggle, " Enable In-Combat Hotkey ('N') to Toggle Active Hero AI");
-            ModSettings.AutoControlGuests = GUILayout.Toggle(ModSettings.AutoControlGuests, " Automatically Enable AI for Guest Characters");
+            // Emergency Protection Toggle & Slider
+            GUILayout.BeginHorizontal();
+            ModSettings.EnableEmergencyLowHpFallback = GUILayout.Toggle(
+                ModSettings.EnableEmergencyLowHpFallback, 
+                " <b>Notfall-Schutz aktivieren</b> (Bei niedrigen TP automatisch auf manuelle Steuerung zurückschalten)"
+            );
+            GUILayout.EndHorizontal();
+
+            if (ModSettings.EnableEmergencyLowHpFallback)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(20);
+                GUILayout.Label($"TP-Schwelle für Notfall-Schutz: <b>{Mathf.RoundToInt(ModSettings.EmergencyHpThresholdPercent)}% TP</b>", GUILayout.Width(280));
+                ModSettings.EmergencyHpThresholdPercent = GUILayout.HorizontalSlider(ModSettings.EmergencyHpThresholdPercent, 5f, 50f, GUILayout.Width(200));
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.Space(5);
+            ModSettings.EnableHotkeyToggle = GUILayout.Toggle(ModSettings.EnableHotkeyToggle, " <b>Hotkey 'N' im Kampf aktivieren</b> (Schaltet den aktiven Helden zwischen KI und Spieler um)");
+            ModSettings.AutoControlGuests = GUILayout.Toggle(ModSettings.AutoControlGuests, " <b>Automatische KI für Gast-Charaktere</b>");
             
-            GUILayout.Space(10);
-            GUILayout.Label("<b>Active Party Character AI Controls:</b>");
+            GUILayout.Space(15);
+            GUILayout.Label("<b>Aktive Helden-Steuerung (Party AI Controls):</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
             if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
@@ -113,7 +130,7 @@ namespace SolastaAIPersistence
             }
             else
             {
-                GUILayout.Label("<i>(No active party loaded in-game. Start or load a campaign session to configure active heroes.)</i>");
+                GUILayout.Label("<i>(Keine aktive Gruppe geladen. Starte oder lade einen Spielstand, um Helden zu konfigurieren.)</i>");
             }
 
             GUILayout.EndVertical();
@@ -289,7 +306,7 @@ namespace SolastaAIPersistence
                 string name = __instance.Name;
                 if (string.IsNullOrEmpty(name)) return;
 
-                // Check Emergency Low HP Fallback
+                // Check Emergency Low HP Fallback (only if enabled)
                 if (Main.ModSettings.EnableEmergencyLowHpFallback && __instance.RulesetCharacter != null)
                 {
                     int currentHp = __instance.RulesetCharacter.CurrentHitPoints;
