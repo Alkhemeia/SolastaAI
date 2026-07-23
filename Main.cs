@@ -518,7 +518,7 @@ namespace SolastaAI
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
                             case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
-                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: moves towards melee while executing ranged backup!)
+                            case 6: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Shillelagh Melee)
                             case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
                             case 8: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
                             case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
@@ -652,7 +652,7 @@ namespace SolastaAI
 
         /// <summary>
         /// Executes Shillelagh Druid Melee tactics based on individual toggles.
-        /// Advances towards melee target while using ranged cantrip/bow if out of reach.
+        /// Programmatically instantiates and casts Shillelagh and advances towards melee target while using ranged cantrip/bow if out of reach.
         /// </summary>
         public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
         {
@@ -675,7 +675,16 @@ namespace SolastaAI
 
                         if (shillelaghSpell != null && repertoire.CanCastSpell(shillelaghSpell, true))
                         {
-                            ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} casting Shillelagh / Zauberstock!");
+                            var implService = ServiceRepository.GetService<IRulesetImplementationService>();
+                            if (implService != null)
+                            {
+                                var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, shillelaghSpell, 0, false);
+                                if (effectSpell != null)
+                                {
+                                    hero.CastSpell(effectSpell, true, false);
+                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} successfully cast Shillelagh / Zauberstock!");
+                                }
+                            }
                             break;
                         }
                     }
@@ -730,8 +739,17 @@ namespace SolastaAI
 
                                 if (guidanceSpell != null && repertoire.CanCastSpell(guidanceSpell, true))
                                 {
-                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} advancing towards melee target ({minDistance} cells) & casting Guidance / Göttliche Führung!");
-                                    castGuidance = true;
+                                    var implService = ServiceRepository.GetService<IRulesetImplementationService>();
+                                    if (implService != null)
+                                    {
+                                        var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, guidanceSpell, 0, false);
+                                        if (effectSpell != null)
+                                        {
+                                            hero.CastSpell(effectSpell, true, false);
+                                            ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} advancing towards melee target ({minDistance} cells) & cast Guidance / Göttliche Führung!");
+                                            castGuidance = true;
+                                        }
+                                    }
                                     break;
                                 }
                             }
@@ -787,8 +805,17 @@ namespace SolastaAI
 
                             if (healSpell != null && repertoire.CanCastSpell(healSpell, true))
                             {
-                                ModEntry?.Logger.Log($"[SolastaAI] Druid Healing Support: {character.Name} healing ally {ally.Name} (HP: {allyHp}/{allyMaxHp})!");
-                                break;
+                                var implService = ServiceRepository.GetService<IRulesetImplementationService>();
+                                if (implService != null)
+                                {
+                                    var effectSpell = implService.InstantiateEffectSpell(hero, repertoire, healSpell, 1, false);
+                                    if (effectSpell != null)
+                                    {
+                                        hero.CastSpell(effectSpell, false, false);
+                                        ModEntry?.Logger.Log($"[SolastaAI] Druid Healing Support: {character.Name} healing ally {ally.Name} (HP: {allyHp}/{allyMaxHp})!");
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
