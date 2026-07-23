@@ -879,9 +879,10 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Controls Ranged Fighter movement: spends Move action to prevent advancing,
-        /// but preserves it when (a) melee-threatened (to retreat) or (b) on lower ground
-        /// than enemies (to seek elevation via CasterCombatDecisions pathfinding).
+        /// Controls Ranged Fighter movement:
+        /// 1. If threatened in melee (≤2 cells): preserves move so fighter can retreat.
+        /// 2. If higher ground is reachable within current turn movement: actively moves character to highest cell.
+        /// 3. Otherwise: spends move action to stay at range and prevent advancing into melee.
         /// </summary>
         public static void HandleRangedFighterPositioning(GameLocationCharacter character)
         {
@@ -896,16 +897,42 @@ namespace SolastaAI
                     return;
                 }
 
-                // Allow movement if fighter is on lower ground than enemies → seek elevation
-                if (IsOnLowerGroundThanEnemies(character))
+                // Search reachable destinations for elevated ground (z > current z)
+                var pathfindingService = ServiceRepository.GetService<IGameLocationPathfindingService>();
+                var positioningService = ServiceRepository.GetService<IGameLocationPositioningService>();
+                var actionService = ServiceRepository.GetService<IGameLocationActionService>();
+
+                if (pathfindingService != null && positioningService != null && actionService != null)
                 {
-                    ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': On lower ground – move preserved to seek elevated position.");
-                    return;
+                    var destinations = pathfindingService.ComputeValidDestinations(character, false, -1);
+                    if (destinations != null && destinations.Count > 0)
+                    {
+                        int currentZ = character.LocationPosition.z;
+                        int bestZ = currentZ;
+                        TA.int3 bestPos = character.LocationPosition;
+
+                        foreach (var pathStep in destinations)
+                        {
+                            var pos = pathStep.position;
+                            if (pos.z > bestZ && positioningService.CanCharacterStayAtPosition(character, pos, true, true, true))
+                            {
+                                bestZ = pos.z;
+                                bestPos = pos;
+                            }
+                        }
+
+                        if (bestZ > currentZ)
+                        {
+                            ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Found elevated ground at {bestPos} (Z: {bestZ} vs current {currentZ}). Moving to high ground!");
+                            actionService.MoveCharacter(character, bestPos, character.Orientation, 0f, ActionDefinitions.MoveStance.Walk, null, false, true, false);
+                            return;
+                        }
+                    }
                 }
 
-                // Already at safe range and good elevation → spend move so AI doesn't advance
+                // If already at best elevation or no higher ground reachable → spend move to stay at range
                 character.SpendActionType(ActionDefinitions.ActionType.Move);
-                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (range {minDist} cells, good elevation).");
+                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (range {minDist} cells, no higher ground reachable).");
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] HandleRangedFighterPositioning: {ex}"); }
         }
