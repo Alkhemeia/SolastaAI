@@ -607,7 +607,7 @@ namespace SolastaAI
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero?.UsablePowers == null) return;
 
-                if (ModSettings.EnableFighterSecondWind)
+                if (ModSettings.EnableFighterSecondWind && IsPowerEnabledForAI("SecondWind"))
                 {
                     int currentHp = hero.CurrentHitPoints;
                     int maxHp = currentHp + hero.MissingHitPoints;
@@ -624,7 +624,7 @@ namespace SolastaAI
                     }
                 }
 
-                if (ModSettings.EnableFighterActionSurge)
+                if (ModSettings.EnableFighterActionSurge && IsPowerEnabledForAI("ActionSurge"))
                 {
                     var power = hero.UsablePowers.Find(p => p.PowerDefinition != null &&
                         p.PowerDefinition.Name.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0);
@@ -647,7 +647,7 @@ namespace SolastaAI
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero?.UsablePowers == null) return;
 
-                if (ModSettings.EnableDruidWildShape)
+                if (ModSettings.EnableDruidWildShape && IsPowerEnabledForAI("WildShape"))
                 {
                     int currentHp = hero.CurrentHitPoints;
                     int maxHp = currentHp + hero.MissingHitPoints;
@@ -1111,24 +1111,62 @@ namespace SolastaAI
                 if (actionParams == null || actionParams.ActingCharacter == null) return true;
                 if (actionParams.ActingCharacter.ControllerId != PlayerControllerManager.DmControllerId) return true;
 
-                // Check Spell
-                var activeEffect = actionParams.RulesetEffect as RulesetEffectSpell;
-                string spellName = activeEffect?.SpellDefinition?.Name;
-
-                if (!string.IsNullOrEmpty(spellName) && !Main.IsSpellEnabledForAI(spellName))
+                // Check RulesetEffect (Spell or Power effect)
+                if (actionParams.RulesetEffect != null)
                 {
-                    Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled spell: {spellName} for {actionParams.ActingCharacter.Name}");
-                    return false;
+                    if (actionParams.RulesetEffect is RulesetEffectSpell spellEffect && spellEffect.SpellDefinition != null)
+                    {
+                        string sName = spellEffect.SpellDefinition.Name;
+                        if (!Main.IsSpellEnabledForAI(sName))
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled spell effect: {sName} for {actionParams.ActingCharacter.Name}");
+                            return false;
+                        }
+                    }
+                    else if (actionParams.RulesetEffect is RulesetEffectPower powerEffect && powerEffect.PowerDefinition != null)
+                    {
+                        string pName = powerEffect.PowerDefinition.Name;
+                        if (!Main.IsPowerEnabledForAI(pName))
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled power effect: {pName} for {actionParams.ActingCharacter.Name}");
+                            return false;
+                        }
+                    }
                 }
 
-                // Check Power
-                var usablePower = actionParams.UsablePower;
-                string powerName = usablePower?.PowerDefinition?.Name;
-
-                if (!string.IsNullOrEmpty(powerName) && !Main.IsPowerEnabledForAI(powerName))
+                // Check UsablePower directly
+                if (actionParams.UsablePower?.PowerDefinition != null)
                 {
-                    Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled power: {powerName} for {actionParams.ActingCharacter.Name}");
-                    return false;
+                    string pName = actionParams.UsablePower.PowerDefinition.Name;
+                    if (!Main.IsPowerEnabledForAI(pName))
+                    {
+                        Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled power: {pName} for {actionParams.ActingCharacter.Name}");
+                        return false;
+                    }
+                }
+
+                // Check ActionDefinition parameters
+                if (actionParams.ActionDefinition != null)
+                {
+                    if (actionParams.ActionDefinition.ActivatedPower != null)
+                    {
+                        string pName = actionParams.ActionDefinition.ActivatedPower.Name;
+                        if (!Main.IsPowerEnabledForAI(pName))
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled activated power: {pName} for {actionParams.ActingCharacter.Name}");
+                            return false;
+                        }
+                    }
+
+                    // String parameters often carry spell or power names
+                    if (!string.IsNullOrEmpty(actionParams.StringParameter))
+                    {
+                        if (!Main.IsSpellEnabledForAI(actionParams.StringParameter) || !Main.IsPowerEnabledForAI(actionParams.StringParameter))
+                        {
+                            Main.ModEntry?.Logger.Log($"[SolastaAI] ExecuteAction BLOCKED disabled stringParam: {actionParams.StringParameter} for {actionParams.ActingCharacter.Name}");
+                            return false;
+                        }
+                    }
                 }
             }
             catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_ExecuteAction: {ex}"); }
