@@ -881,8 +881,9 @@ namespace SolastaAI
         /// <summary>
         /// Controls Ranged Fighter movement:
         /// 1. If threatened in melee (≤2 cells): preserves move so fighter can retreat.
-        /// 2. If higher ground is reachable within current turn movement: actively moves character to highest cell.
-        /// 3. Otherwise: spends move action to stay at range and prevent advancing into melee.
+        /// 2. If out of weapon range (> attack range): preserves move so fighter can advance into range.
+        /// 3. If higher ground is reachable: moves to highest cell.
+        /// 4. If in range and on good ground: spends move action so fighter shoots without walking into melee.
         /// </summary>
         public static void HandleRangedFighterPositioning(GameLocationCharacter character)
         {
@@ -891,13 +892,35 @@ namespace SolastaAI
                 if (character.ControllerId != PlayerControllerManager.DmControllerId) return;
                 int minDist = GetMinDistanceToEnemy(character);
 
+                // 1. Melee threat: preserve move so character can retreat
                 if (minDist <= 2)
                 {
                     ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Melee threat ({minDist} cells), move preserved for retreat.");
                     return;
                 }
 
-                // Search reachable destinations for elevated ground (z > current z)
+                // Get character's max ranged weapon range from active AttackModes (default 12 cells)
+                int maxRangedRange = 12;
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero?.AttackModes != null)
+                {
+                    foreach (var mode in hero.AttackModes)
+                    {
+                        if (mode != null && mode.Ranged && mode.MaxRange > 0)
+                        {
+                            maxRangedRange = Math.Max(maxRangedRange, mode.MaxRange);
+                        }
+                    }
+                }
+
+                // 2. Out of weapon range: preserve move so AI advances into shooting range
+                if (minDist > maxRangedRange)
+                {
+                    ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Enemy out of range ({minDist} > {maxRangedRange} cells), move preserved to advance into range.");
+                    return;
+                }
+
+                // 3. Search reachable destinations for elevated ground (z > current z)
                 var pathfindingService = ServiceRepository.GetService<IGameLocationPathfindingService>();
                 var positioningService = ServiceRepository.GetService<IGameLocationPositioningService>();
                 var actionService = ServiceRepository.GetService<IGameLocationActionService>();
@@ -930,9 +953,9 @@ namespace SolastaAI
                     }
                 }
 
-                // If already at best elevation or no higher ground reachable → spend move to stay at range
+                // 4. In range and no higher ground reachable → spend move so fighter shoots from current position without closing into melee
                 character.SpendActionType(ActionDefinitions.ActionType.Move);
-                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (range {minDist} cells, no higher ground reachable).");
+                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (in range {minDist}/{maxRangedRange} cells, no higher ground).");
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] HandleRangedFighterPositioning: {ex}"); }
         }
