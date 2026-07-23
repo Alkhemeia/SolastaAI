@@ -867,22 +867,10 @@ namespace SolastaAI
                     var effect = impl.InstantiateEffectSpell(hero, rep, spell, 0, false);
                     if (effect == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh effect is null!"); break; }
 
-                    // Build CharacterActionParams for CastBonus (Shillelagh is a bonus action cantrip)
-                    // Set private fields via reflection since no public setters exist.
-                    var castParams = new CharacterActionParams(character, ActionDefinitions.Id.CastBonus);
-                    var pType = castParams.GetType();
-                    pType.GetField("spellRepertoire", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(castParams, rep);
-                    pType.GetField("activeEffect", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(castParams, effect);
-
-                    // Add caster as the target (Shillelagh targets self/own weapon)
-                    var tgtChars = pType.GetField("targetCharacters", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(castParams) as List<GameLocationCharacter>;
-                    tgtChars?.Add(character);
-
-                    var actionService = ServiceRepository.GetService<IGameLocationActionService>();
-                    if (actionService == null) { ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: IGameLocationActionService null!"); break; }
-
-                    actionService.ExecuteInstantSingleAction(castParams);
-                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast via ExecuteInstantSingleAction(CastBonus)!");
+                    // Cast spell directly on RulesetCharacter level (safe & stable execution)
+                    hero.CastSpell(effect, true, false);
+                    character.SpendActionType(ActionDefinitions.ActionType.Bonus);
+                    ModEntry?.Logger.Log($"[SolastaAI] {character.Name}: Shillelagh cast successfully!");
                     break;
                 }
             }
