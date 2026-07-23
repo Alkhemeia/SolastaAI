@@ -907,16 +907,51 @@ namespace SolastaAI
     }
 
     /// <summary>
-    /// POSTFIX on StartBattleTurn: Clears CurrentTurnCharacterName after turn setup is complete.
+    /// <summary>
+    /// POSTFIX on StartBattleTurn: Spends the Move action for Ranged Fighters when enemies are
+    /// not in immediate melee range. This prevents the AI from pathfinding towards enemies.
+    /// The move action is preserved when an enemy is adjacent (≤2 cells) so the fighter can retreat.
     /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
     public static class Patch_StartBattleTurn_Post
     {
         public static void Postfix(GameLocationCharacter __instance)
         {
-            // Keep character name set during AI decision phase - cleared at turn end
+            try
+            {
+                if (__instance == null) return;
+                string name = __instance.Name ?? "";
+                if (!Main.CharacterAIChoices.TryGetValue(name, out int choice)) return;
+                if (choice != Main.MODE_FIGHTER_RANGED) return;
+                // Only act when the character is AI-controlled
+                if (__instance.ControllerId != PlayerControllerManager.DmControllerId) return;
+
+                int minDist = Main.GetMinDistanceToEnemy(__instance);
+
+                // If no enemy is immediately adjacent (melee threat), spend the move action.
+                // This leaves the AI with only Attack / Bonus actions → it shoots from where it stands.
+                // If an enemy is already adjacent (≤ 2 cells), keep the move so the fighter can retreat.
+                if (minDist > 2)
+                {
+                    __instance.SpendActionType(ActionDefinitions.ActionType.Move);
+                    Main.ModEntry?.Logger.Log(
+                        $"[SolastaAI] Ranged Fighter '{name}': Move action spent " +
+                        $"(nearest enemy {minDist} cells away). Fighter stays at range.");
+                }
+                else
+                {
+                    Main.ModEntry?.Logger.Log(
+                        $"[SolastaAI] Ranged Fighter '{name}': Enemy at {minDist} cells – " +
+                        $"move kept so fighter can retreat.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_StartBattleTurn_Post: {ex}");
+            }
         }
     }
+
 
     /// <summary>
     /// POSTFIX on EndBattleTurn: Clears CurrentTurnCharacterName.
