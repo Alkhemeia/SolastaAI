@@ -303,7 +303,7 @@ namespace SolastaAI
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                             ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Auto-Weapon Swap / Ranged Cantrips</b> (Use cantrips/ranged weapons when out of reach)"
+                            "   └─ <b>Advance Towards Target + Ranged Cantrips</b> (Use ranged cantrip/bow while advancing into melee)"
                         );
 
                         GUILayout.EndVertical();
@@ -518,7 +518,7 @@ namespace SolastaAI
                             case 3: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case 4: package = decisionPackageDb.GetElement("ClericCombatDecisions", true); break;
                             case 5: package = decisionPackageDb.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break; // Druid (Wild Shape)
-                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee)
+                            case 6: package = decisionPackageDb.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break; // Druid (Shillelagh Melee: moves towards melee while executing ranged backup!)
                             case 7: package = decisionPackageDb.GetElement("FighterCombatDecisions", true); break; // Fighter (Melee)
                             case 8: package = decisionPackageDb.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break; // Fighter (Ranged / Archer)
                             case 9: package = decisionPackageDb.GetElement("CasterCombatDecisions", true); break;
@@ -652,6 +652,7 @@ namespace SolastaAI
 
         /// <summary>
         /// Executes Shillelagh Druid Melee tactics based on individual toggles.
+        /// Advances towards melee target while using ranged cantrip/bow if out of reach.
         /// </summary>
         public static void ExecuteShillelaghDruidTactics(GameLocationCharacter character)
         {
@@ -686,7 +687,7 @@ namespace SolastaAI
                     CheckAndHealAllies(character);
                 }
 
-                // 3. Enemy Distance & Guidance / Cantrip Check
+                // 3. Enemy Distance & Guidance / Ranged Cantrip Advance Check
                 var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
                 if (battleService != null && battleService.IsBattleInProgress && battleService.Battle != null)
                 {
@@ -729,14 +730,14 @@ namespace SolastaAI
 
                                 if (guidanceSpell != null && repertoire.CanCastSpell(guidanceSpell, true))
                                 {
-                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} out of melee range ({minDistance} cells). Casting Guidance / Göttliche Führung on self!");
+                                    ModEntry?.Logger.Log($"[SolastaAI] Shillelagh Druid: {character.Name} advancing towards melee target ({minDistance} cells) & casting Guidance / Göttliche Führung!");
                                     castGuidance = true;
                                     break;
                                 }
                             }
                         }
 
-                        // If Guidance not available, equip ranged set for Ranged Cantrip / Bow
+                        // If Guidance not available, use Ranged Cantrip / Bow WHILE advancing towards melee target!
                         if (!castGuidance)
                         {
                             CheckAndAutoSwapWeapons(character, isRangedArchetype: true);
