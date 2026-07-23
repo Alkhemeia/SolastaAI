@@ -7,9 +7,9 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
 1. **Complete Independence & Update-Safety:**
    - Standalone mod with **zero dependencies** on third-party mods.
    - Operates directly via Solasta's native AI Decision Package engine (`TA.AI.DecisionPackageDefinition`).
-2. **Structured Dropdown UI & Categorized Spell Controls:**
-   - Convenient **Dropdown Selector** per hero e.g. `[ AI: Druid (Shillelagh) ▼ ]`.
-   - **Categorized Individual Spell & Skill Controls:** Every single Druid spell and Fighter skill can be toggled on or off individually under clean thematic sub-categories!
+2. **Structured Dropdown UI & Categorized Controls:**
+   - Convenient **Dropdown Selector** per hero e.g. `[ AI: Fighter (Melee) ▼ ]`.
+   - **Categorized Individual Controls:** Every single spell, skill, and combat maneuver for Druids and Fighters can be toggled on or off individually under clean thematic sub-categories!
    - Archetypes available per hero:
      - `Human (Player Control)`
      - `AI: Melee (Default)`
@@ -22,16 +22,15 @@ A standalone Unity Mod Manager (UMM) mod for **Solasta: Crown of the Magister** 
      - `AI: Fighter (Ranged)` - Ranged archery positioning and opportunity attack prevention.
      - `AI: Mage Combat`
      - `AI: Rogue Combat`
-3. **Categorized Spell & Skill Controls Per Mode:**
+3. **Categorized Controls Per Mode:**
+   - **Fighter Modes:**
+     - **🛡️ Defense & Recovery:** `Second Wind / Durchschnaufen`, `Indomitable / Unbeugsam`
+     - **⚔️ Offensive Skills & Maneuvers:** `Action Surge / Tatendrank`, `Pushing Attack / Stoßangriff`, `Trip Attack / Beinstellen`, `Riposte / Riposte`, `Precision Attack / Präzisionsangriff`
+     - **🎯 Movement & Positioning:** `Avoid Opportunity Attacks` (For Ranged Fighters), `Auto-Weapon Swap`
    - **Druid Modes:**
      - **💚 Healing & Restoration:** `Cure Wounds`, `Healing Word`, `Lesser Restoration`, `Goodberry`
      - **🛡️ Protection & Buffs:** `Shillelagh`, `Guidance`, `Protection from Poison`, `Barkskin`, `Longstrider`, `Pass Without Trace`
      - **⚔️ Attack & Crowd Control:** `Produce Flame`, `Thorn Whip`, `Poison Spray`, `Entangle`, `Faerie Fire`, `Flaming Sphere`, `Hold Person`, `Moonbeam`, `Spike Growth`, `Call Lightning`
-   - **Fighter Modes:**
-     - `[x] Use Second Wind / Durchschnaufen`
-     - `[x] Use Action Surge / Tatendrank`
-     - `[x] Avoid Opportunity Attacks` (For Ranged Fighters)
-     - `[x] Auto-Weapon Swap`
 4. **Automatic Weapon Swapping:**
    - Automatically evaluates tactical grid distances during a character's turn.
 5. **Emergency Low HP Protection:**

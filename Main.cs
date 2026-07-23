@@ -39,9 +39,14 @@ namespace SolastaAI
         /// </summary>
         public bool EnableAutoWeaponSwap = true;
 
-        // --- GRANULAR FIGHTER SKILL TOGGLES ---
+        // --- GRANULAR FIGHTER SKILL & MANEUVER TOGGLES ---
         public bool EnableFighterSecondWind = true;
         public bool EnableFighterActionSurge = true;
+        public bool EnableFighterIndomitable = true;
+        public bool EnableFighterPushingAttack = true;
+        public bool EnableFighterTripAttack = true;
+        public bool EnableFighterRiposte = true;
+        public bool EnableFighterPrecisionAttack = true;
         public bool EnableAvoidOpportunityAttacks = true;
 
         // --- GRANULAR DRUID SKILL & SPELL TOGGLES ---
@@ -324,29 +329,58 @@ namespace SolastaAI
                     else if (currentChoice == 7 || currentChoice == 8) // Fighter (Melee) or Fighter (Ranged)
                     {
                         GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>⚙️ Individual Skill Controls for {displayName} ({currentArchetypeName}):</i>");
+                        GUILayout.Label($"<i>✨ Individual Skill & Maneuver Controls for {displayName} ({currentArchetypeName}):</i>");
 
+                        // Category 1: Defense & Recovery Skills
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>🛡️ Defense & Recovery Skills:</b>");
                         ModSettings.EnableFighterSecondWind = GUILayout.Toggle(
                             ModSettings.EnableFighterSecondWind,
-                            "   └─ <b>Use Second Wind / Durchschnaufen</b> (Self-heal when HP < 60%)"
+                            "     └─ <b>Second Wind / Durchschnaufen</b> (Self-heal when HP < 60%)"
+                        );
+                        ModSettings.EnableFighterIndomitable = GUILayout.Toggle(
+                            ModSettings.EnableFighterIndomitable,
+                            "     └─ <b>Indomitable / Unbeugsam</b> (Reroll failed saving throws)"
                         );
 
+                        // Category 2: Offensive Skills & Maneuvers
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>⚔️ Offensive Skills & Combat Maneuvers:</b>");
                         ModSettings.EnableFighterActionSurge = GUILayout.Toggle(
                             ModSettings.EnableFighterActionSurge,
-                            "   └─ <b>Use Action Surge / Tatendrank</b> (Grant extra actions during combat)"
+                            "     └─ <b>Action Surge / Tatendrank</b> (Grant extra actions during combat)"
+                        );
+                        ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(
+                            ModSettings.EnableFighterPushingAttack,
+                            "     └─ <b>Pushing Attack / Stoßangriff</b> (Push target backwards)"
+                        );
+                        ModSettings.EnableFighterTripAttack = GUILayout.Toggle(
+                            ModSettings.EnableFighterTripAttack,
+                            "     └─ <b>Trip Attack / Beinstellen</b> (Knock target prone)"
+                        );
+                        ModSettings.EnableFighterRiposte = GUILayout.Toggle(
+                            ModSettings.EnableFighterRiposte,
+                            "     └─ <b>Riposte / Riposte</b> (Counter-attack on missed enemy hit)"
+                        );
+                        ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(
+                            ModSettings.EnableFighterPrecisionAttack,
+                            "     └─ <b>Precision Attack / Präzisionsangriff</b> (Add bonus to attack rolls)"
                         );
 
+                        // Category 3: Tactical Movement & Positioning
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>🎯 Movement & Tactical Positioning:</b>");
                         if (currentChoice == 8) // Fighter (Ranged)
                         {
                             ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(
                                 ModSettings.EnableAvoidOpportunityAttacks,
-                                "   └─ <b>Avoid Opportunity Attacks</b> (Fight adjacent threats in melee first before retreating)"
+                                "     └─ <b>Avoid Opportunity Attacks</b> (Fight adjacent threats in melee first before retreating)"
                             );
                         }
 
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(
                             ModSettings.EnableAutoWeaponSwap,
-                            "   └─ <b>Auto-Weapon Swap</b> (Switch between Melee and Ranged weapon sets based on distance)"
+                            "     └─ <b>Auto-Weapon Swap</b> (Switch between Melee and Ranged weapon sets based on distance)"
                         );
 
                         GUILayout.EndVertical();
@@ -565,7 +599,7 @@ namespace SolastaAI
         }
 
         /// <summary>
-        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank) based on individual toggles.
+        /// Executes Fighter class tactical skills (Second Wind / Durchschnaufen, Action Surge / Tatendrank, Maneuvers) based on individual toggles.
         /// </summary>
         public static void ExecuteFighterTactics(GameLocationCharacter character, bool isRangedArchetype)
         {
