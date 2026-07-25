@@ -804,6 +804,98 @@ namespace SolastaAI
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndCastProtectionFromPoison: {ex}"); }
         }
 
+        public static void CheckAndUseHealingPotion(GameLocationCharacter character)
+        {
+            try
+            {
+                if (character == null || character.ControllerId != PlayerControllerManager.DmControllerId) return;
+                string name = character.Name ?? "";
+                string rulesetName = character.RulesetCharacter?.Name ?? "";
+                if (!IsGadgetItemEnabledForAI(name) || (!string.IsNullOrEmpty(rulesetName) && !IsGadgetItemEnabledForAI(rulesetName))) return;
+
+                var hero = character.RulesetCharacter as RulesetCharacterHero;
+                if (hero == null) return;
+
+                int currentHp = hero.CurrentHitPoints;
+                int maxHp = currentHp + hero.MissingHitPoints;
+                if (maxHp <= 0) return;
+
+                float hpPercent = (float)currentHp / maxHp * 100f;
+                // Only consume healing potions if character HP drops below 60%
+                if (hpPercent >= 60f) return;
+
+                var actionService = ServiceRepository.GetService<IGameLocationActionService>();
+                if (actionService == null) return;
+
+                // Search character inventory for healing potions (in quick slots or personal container)
+                RulesetItem potionItem = null;
+                var inventory = hero.CharacterInventory;
+                if (inventory != null)
+                {
+                    // 1. Check inventory slots (gadgets / utensil slots / equipped items)
+                    if (inventory.InventorySlotsByName != null)
+                    {
+                        foreach (var kvp in inventory.InventorySlotsByName)
+                        {
+                            var slot = kvp.Value;
+                            if (slot?.EquipedItem?.ItemDefinition != null)
+                            {
+                                string iName = slot.EquipedItem.ItemDefinition.Name;
+                                if (iName.IndexOf("PotionOfHealing", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    iName.IndexOf("Heiltrank", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    potionItem = slot.EquipedItem;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Check personal container (backpack inventory)
+                    if (potionItem == null && inventory.PersonalContainer?.InventorySlots != null)
+                    {
+                        foreach (var slot in inventory.PersonalContainer.InventorySlots)
+                        {
+                            if (slot?.EquipedItem?.ItemDefinition != null)
+                            {
+                                string iName = slot.EquipedItem.ItemDefinition.Name;
+                                if (iName.IndexOf("PotionOfHealing", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    iName.IndexOf("Heiltrank", StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    potionItem = slot.EquipedItem;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (potionItem != null)
+                {
+                    var actionParams = new CharacterActionParams(character, ActionDefinitions.Id.UseItemBonus);
+                    actionParams.TargetCharacters.Add(character);
+                    actionParams.TargetItem = potionItem;
+
+                    // Check if character has Bonus Action type available
+                    if (character.GetActionStatus(ActionDefinitions.Id.UseItemBonus, ActionDefinitions.ActionScope.Battle, ActionDefinitions.ActionStatus.Available) == ActionDefinitions.ActionStatus.Available)
+                    {
+                        actionService.ExecuteAction(actionParams, null, false);
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {potionItem.ItemDefinition.Name} via Bonus Action (HP: {currentHp}/{maxHp})");
+                        return;
+                    }
+
+                    // Fallback to Main Action item usage
+                    actionParams.ActionDefinition = actionService.AllActionDefinitions[ActionDefinitions.Id.UseItemMain];
+                    if (character.GetActionStatus(ActionDefinitions.Id.UseItemMain, ActionDefinitions.ActionScope.Battle, ActionDefinitions.ActionStatus.Available) == ActionDefinitions.ActionStatus.Available)
+                    {
+                        actionService.ExecuteAction(actionParams, null, false);
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {potionItem.ItemDefinition.Name} via Main Action (HP: {currentHp}/{maxHp})");
+                    }
+                }
+            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndUseHealingPotion: {ex}"); }
+        }
+
         public static void CheckAndHealAllies(GameLocationCharacter character)
         {
             try
@@ -1096,6 +1188,7 @@ namespace SolastaAI
                 if (choice >= 0)
                 {
                     Main.ApplyAIController(__instance, choice);
+                    if (choice > 0) Main.CheckAndUseHealingPotion(__instance);
                     switch (choice)
                     {
                         case Main.MODE_DRUID:            Main.ExecuteDruidTactics(__instance); break;
