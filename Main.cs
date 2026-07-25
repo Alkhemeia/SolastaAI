@@ -855,9 +855,10 @@ namespace SolastaAI
                 }
 
                 // Melee Fighter logic: check distance to nearest enemy
-                // If adjacent/reachable in melee (<= 2 cells), ensure melee weapon is active!
-                // If farther away (> 2 cells), use ranged weapon set to shoot while closing distance.
-                int meleeRangeThreshold = 2;
+                // A normal character can walk ~6 cells in 1 movement action.
+                // If an enemy is within 1 turn reach (<= 6 cells), keep MELEE weapon active so fighter advances and attacks!
+                // Only switch to ranged weapon if nearest enemy is farther than 6 cells away.
+                int meleeRangeThreshold = 6;
 
                 if (minDist > meleeRangeThreshold && !currentlyRanged)
                 {
@@ -876,7 +877,7 @@ namespace SolastaAI
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (!hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy in melee range ({minDist} cells <= {meleeRangeThreshold}), switched back to MELEE weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy in movement reach ({minDist} cells <= {meleeRangeThreshold}), switched back to MELEE weapon set.");
                     }
                     else
                     {
