@@ -635,16 +635,16 @@ namespace SolastaAI
                         switch (choice)
                         {
                             case MODE_MELEE:          pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
-                            case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
                             case MODE_DRUID:          pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_FIGHTER:
                                 pkg = (ModSettings.FighterStyle == "Ranged")
-                                    ? db.GetElement("CasterCombatDecisions", true)
+                                    ? db.GetElement("DefaultRangeWithBackupMeleeDecisions", true)
                                     : db.GetElement("DefaultMeleeWithBackupRangeDecisions", true);
                                 break;
-                            case MODE_MAGE:           pkg = db.GetElement("CasterCombatDecisions", true); break;
+                            case MODE_MAGE:           pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
                             case MODE_ROGUE:          pkg = db.GetElement("RogueCombatDecisions", true); break;
                             default:                  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
@@ -1007,9 +1007,8 @@ namespace SolastaAI
                     }
                 }
 
-                // 4. In range and no higher ground reachable → spend move so fighter shoots from current position without closing into melee
-                character.SpendActionType(ActionDefinitions.ActionType.Move);
-                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Move spent (in range {minDist}/{maxRangedRange} cells, no higher ground).");
+                // 4. In range: keep move action intact so AI can maneuver and attack freely
+                ModEntry?.Logger.Log($"[SolastaAI] Ranged Fighter '{character.Name}': Enemy in range ({minDist}/{maxRangedRange} cells), ready for ranged attack.");
             }
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] HandleRangedFighterPositioning: {ex}"); }
         }
