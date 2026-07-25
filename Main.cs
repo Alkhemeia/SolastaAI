@@ -102,23 +102,13 @@ namespace SolastaAI
         public const int MODE_MELEE         = 1;
         public const int MODE_RANGE_BACKUP  = 2;
         public const int MODE_CASTER        = 3;
-        public const int MODE_CLERIC        = 4;
-        public const int MODE_DRUID         = 5;
-        public const int MODE_FIGHTER       = 6;
-        public const int MODE_MAGE          = 7;
-        public const int MODE_ROGUE         = 8;
 
         public static readonly string[] AIPackageNames = new string[]
         {
             "Human (Player)",
             "AI: Melee (Default)",
             "AI: Range (Default)",
-            "AI: Caster (Default)",
-            "AI: Cleric",
-            "AI: Druid",
-            "AI: Fighter",
-            "AI: Mage",
-            "AI: Rogue"
+            "AI: Caster (Default)"
         };
 
         public static bool Load(UnityModManager.ModEntry modEntry)
@@ -397,120 +387,7 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    if (currentChoice == MODE_DRUID)
-                    {
-                        GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Druid Spell & Ability Controls for {displayName}:</i>");
-
-                        ModSettings.EnableDruidWildShape = GUILayout.Toggle(ModSettings.EnableDruidWildShape, " <b>Wild Shape / Tiergestalt</b>");
-
-                        GUILayout.Space(3);
-
-                        string dPrefix = $"{name}_druid_";
-
-                        DrawCategoryHeader(dPrefix + "cantrips", "<b>🔮 Cantrips / Zaubertricks</b>", () =>
-                        {
-                            ModSettings.EnableSpellShillelagh = GUILayout.Toggle(ModSettings.EnableSpellShillelagh, "└─ <b>Shillelagh / Zauberstock</b>");
-                            ModSettings.EnableSpellGuidance = GUILayout.Toggle(ModSettings.EnableSpellGuidance, "└─ <b>Guidance / Göttliche Führung</b>");
-                            ModSettings.EnableSpellProduceFlame = GUILayout.Toggle(ModSettings.EnableSpellProduceFlame, "└─ <b>Produce Flame / Flamme erzeugen</b>");
-                            ModSettings.EnableSpellThornWhip = GUILayout.Toggle(ModSettings.EnableSpellThornWhip, "└─ <b>Thorn Whip / Dornenpeitsche</b>");
-                            ModSettings.EnableSpellPoisonSpray = GUILayout.Toggle(ModSettings.EnableSpellPoisonSpray, "└─ <b>Poison Spray / Giftsprühen</b>");
-                            ModSettings.EnableSpellPoisonSting = GUILayout.Toggle(ModSettings.EnableSpellPoisonSting, "└─ <b>Poison Sting / Giftiger Stachel</b>");
-                            ModSettings.EnableSpellChillTouch = GUILayout.Toggle(ModSettings.EnableSpellChillTouch, "└─ <b>Chill Touch / Kalte Hand</b>");
-                            ModSettings.EnableSpellResistElements = GUILayout.Toggle(ModSettings.EnableSpellResistElements, "└─ <b>Resist Elements</b>");
-                        });
-
-                        DrawCategoryHeader(dPrefix + "healing", "<b>💚 Healing & Restoration</b>", () =>
-                        {
-                            ModSettings.EnableSpellCureWounds = GUILayout.Toggle(ModSettings.EnableSpellCureWounds, "└─ <b>Cure Wounds / Wunden heilen</b>");
-                            ModSettings.EnableSpellHealingWord = GUILayout.Toggle(ModSettings.EnableSpellHealingWord, "└─ <b>Healing Word / Wort der Heilung</b>");
-                            ModSettings.EnableSpellLesserRestoration = GUILayout.Toggle(ModSettings.EnableSpellLesserRestoration, "└─ <b>Lesser Restoration / Teilw. Genesung</b>");
-                            ModSettings.EnableSpellGoodberry = GUILayout.Toggle(ModSettings.EnableSpellGoodberry, "└─ <b>Goodberry / Gute Beere</b>");
-                            ModSettings.EnableSpellCreateFoodAndWater = GUILayout.Toggle(ModSettings.EnableSpellCreateFoodAndWater, "└─ <b>Create Food & Water / Nahrung erschaffen</b>");
-                            ModSettings.EnableSpellRevivify = GUILayout.Toggle(ModSettings.EnableSpellRevivify, "└─ <b>Revivify / Wiederbeleben</b>");
-                        });
-
-                        DrawCategoryHeader(dPrefix + "protection", "<b>🛡️ Protection & Buffs</b>", () =>
-                        {
-                            ModSettings.EnableSpellProtectionFromPoison = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromPoison, "└─ <b>Protection from Poison / Schutz vor Gift</b>");
-                            ModSettings.EnableSpellProtectionFromEnergy = GUILayout.Toggle(ModSettings.EnableSpellProtectionFromEnergy, "└─ <b>Protection from Energy / Schutz vor Energie</b>");
-                            ModSettings.EnableSpellBarkskin = GUILayout.Toggle(ModSettings.EnableSpellBarkskin, "└─ <b>Barkskin / Rindenhaut</b>");
-                            ModSettings.EnableSpellDarkvision = GUILayout.Toggle(ModSettings.EnableSpellDarkvision, "└─ <b>Darkvision / Dunkelsicht</b>");
-                            ModSettings.EnableSpellLongstrider = GUILayout.Toggle(ModSettings.EnableSpellLongstrider, "└─ <b>Longstrider / Langschritt</b>");
-                            ModSettings.EnableSpellPassWithoutTrace = GUILayout.Toggle(ModSettings.EnableSpellPassWithoutTrace, "└─ <b>Pass Without Trace / Spurlos verbergen</b>");
-                            ModSettings.EnableSpellJump = GUILayout.Toggle(ModSettings.EnableSpellJump, "└─ <b>Jump / Springen</b>");
-                        });
-
-                        DrawCategoryHeader(dPrefix + "attack", "<b>⚔️ Attack & Control Spells</b>", () =>
-                        {
-                            ModSettings.EnableSpellEntangle = GUILayout.Toggle(ModSettings.EnableSpellEntangle, "└─ <b>Entangle / Verstricken</b>");
-                            ModSettings.EnableSpellFaerieFire = GUILayout.Toggle(ModSettings.EnableSpellFaerieFire, "└─ <b>Faerie Fire / Feenfeuer</b>");
-                            ModSettings.EnableSpellFogCloud = GUILayout.Toggle(ModSettings.EnableSpellFogCloud, "└─ <b>Fog Cloud / Nebelwolke</b>");
-                            ModSettings.EnableSpellAnimalFriendship = GUILayout.Toggle(ModSettings.EnableSpellAnimalFriendship, "└─ <b>Animal Friendship / Tierfreundschaft</b>");
-                            ModSettings.EnableSpellCharmPerson = GUILayout.Toggle(ModSettings.EnableSpellCharmPerson, "└─ <b>Charm Person / Person bezaubern</b>");
-                            ModSettings.EnableSpellDetectMagic = GUILayout.Toggle(ModSettings.EnableSpellDetectMagic, "└─ <b>Detect Magic / Magie entdecken</b>");
-                            ModSettings.EnableSpellDetectPoisonAndDisease = GUILayout.Toggle(ModSettings.EnableSpellDetectPoisonAndDisease, "└─ <b>Detect Poison / Gift entdecken</b>");
-                            ModSettings.EnableSpellFlameBlade = GUILayout.Toggle(ModSettings.EnableSpellFlameBlade, "└─ <b>Flame Blade / Flammenklinge</b>");
-                            ModSettings.EnableSpellFlamingSphere = GUILayout.Toggle(ModSettings.EnableSpellFlamingSphere, "└─ <b>Flaming Sphere / Flammenkugel</b>");
-                            ModSettings.EnableSpellHeatMetal = GUILayout.Toggle(ModSettings.EnableSpellHeatMetal, "└─ <b>Heat Metal / Metall erhitzen</b>");
-                            ModSettings.EnableSpellHoldPerson = GUILayout.Toggle(ModSettings.EnableSpellHoldPerson, "└─ <b>Hold Person / Person festhalten</b>");
-                            ModSettings.EnableSpellMoonbeam = GUILayout.Toggle(ModSettings.EnableSpellMoonbeam, "└─ <b>Moonbeam / Mondstrahl</b>");
-                            ModSettings.EnableSpellSpikeGrowth = GUILayout.Toggle(ModSettings.EnableSpellSpikeGrowth, "└─ <b>Spike Growth / Dornenwuchs</b>");
-                            ModSettings.EnableSpellCallLightning = GUILayout.Toggle(ModSettings.EnableSpellCallLightning, "└─ <b>Call Lightning / Blitzschlag rufen</b>");
-                            ModSettings.EnableSpellDispelMagic = GUILayout.Toggle(ModSettings.EnableSpellDispelMagic, "└─ <b>Dispel Magic / Magie bannen</b>");
-                            ModSettings.EnableSpellSleetStorm = GUILayout.Toggle(ModSettings.EnableSpellSleetStorm, "└─ <b>SleetStorm / Graupelschauer</b>");
-                            ModSettings.EnableSpellWindWall = GUILayout.Toggle(ModSettings.EnableSpellWindWall, "└─ <b>Wind Wall / Windwand</b>");
-                            ModSettings.EnableSpellDaylight = GUILayout.Toggle(ModSettings.EnableSpellDaylight, "└─ <b>Daylight / Tageslicht</b>");
-                        });
-
-                        GUILayout.Space(3);
-                        ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, " <b>Auto-Weapon Swap</b>");
-                        GUILayout.EndVertical();
-                    }
-                    else if (currentChoice == MODE_FIGHTER)
-                    {
-                        GUILayout.BeginVertical("box");
-                        GUILayout.Label($"<i>✨ Fighter Combat Style & Skill Controls for {displayName}:</i>");
-
-                        GUILayout.Space(3);
-                        GUILayout.Label("  <b>⚔️ Combat Style / Kampfstil:</b>");
-                        GUILayout.BeginHorizontal();
-                        bool isMeleeStyle = ModSettings.FighterStyle != "Ranged";
-                        if (GUILayout.Toggle(isMeleeStyle, "  <b>⚔️ Melee (Nahkampf)</b>", GUILayout.Width(150)))
-                            ModSettings.FighterStyle = "Melee";
-                        if (GUILayout.Toggle(!isMeleeStyle, "  <b>🏹 Ranged (Fernkampf)</b>", GUILayout.Width(150)))
-                            ModSettings.FighterStyle = "Ranged";
-                        GUILayout.EndHorizontal();
-
-                        GUILayout.Space(3);
-
-                        string fPrefix = $"{name}_fighter_";
-
-                        DrawCategoryHeader(fPrefix + "defense", "<b>🛡️ Defense & Recovery</b>", () =>
-                        {
-                            ModSettings.EnableFighterSecondWind = GUILayout.Toggle(ModSettings.EnableFighterSecondWind, "└─ <b>Second Wind / Durchschnaufen</b>");
-                            ModSettings.EnableFighterIndomitable = GUILayout.Toggle(ModSettings.EnableFighterIndomitable, "└─ <b>Indomitable / Unbeugsam</b>");
-                        });
-
-                        DrawCategoryHeader(fPrefix + "offensive", "<b>⚔️ Offensive Skills & Maneuvers</b>", () =>
-                        {
-                            ModSettings.EnableFighterActionSurge = GUILayout.Toggle(ModSettings.EnableFighterActionSurge, "└─ <b>Action Surge / Tatendrank</b>");
-                            ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(ModSettings.EnableFighterPushingAttack, "└─ <b>Pushing Attack / Stoßangriff</b>");
-                            ModSettings.EnableFighterTripAttack = GUILayout.Toggle(ModSettings.EnableFighterTripAttack, "└─ <b>Trip Attack / Beinstellen</b>");
-                            ModSettings.EnableFighterRiposte = GUILayout.Toggle(ModSettings.EnableFighterRiposte, "└─ <b>Riposte</b>");
-                            ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(ModSettings.EnableFighterPrecisionAttack, "└─ <b>Precision Attack / Präzisionsangriff</b>");
-                        });
-
-                        DrawCategoryHeader(fPrefix + "movement", "<b>🎯 Movement & Positioning</b>", () =>
-                        {
-                            if (ModSettings.FighterStyle == "Ranged")
-                                ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "└─ <b>Avoid Opportunity Attacks</b>");
-                            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "└─ <b>Auto-Weapon Swap</b>");
-                        });
-
-                        GUILayout.EndVertical();
-                    }
-                    else if (currentChoice > 0)
+                    if (currentChoice > 0)
                     {
                         GUILayout.BeginVertical("box");
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
@@ -637,15 +514,6 @@ namespace SolastaAI
                             case MODE_MELEE:          pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                             case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case MODE_CLERIC:         pkg = db.GetElement("ClericCombatDecisions", true); break;
-                            case MODE_DRUID:          pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case MODE_FIGHTER:
-                                pkg = (ModSettings.FighterStyle == "Ranged")
-                                    ? db.GetElement("DefaultRangeWithBackupMeleeDecisions", true)
-                                    : db.GetElement("DefaultMeleeWithBackupRangeDecisions", true);
-                                break;
-                            case MODE_MAGE:           pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
-                            case MODE_ROGUE:          pkg = db.GetElement("RogueCombatDecisions", true); break;
                             default:                  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
@@ -1079,17 +947,10 @@ namespace SolastaAI
                     Main.CharacterAIChoices.TryGetValue(rulesetName, out choice);
                 }
 
-                if (choice >= 0)
+                if (choice > 0)
                 {
                     Main.ApplyAIController(__instance, choice);
-                    switch (choice)
-                    {
-                        case Main.MODE_DRUID:            Main.ExecuteDruidTactics(__instance); break;
-                        case Main.MODE_FIGHTER:          Main.ExecuteFighterTactics(__instance, Main.ModSettings.FighterStyle == "Ranged"); break;
-                        default:
-                            if (choice > 0) Main.CheckAndAutoSwapWeapons(__instance, false);
-                            break;
-                    }
+                    Main.CheckAndAutoSwapWeapons(__instance, choice == Main.MODE_RANGE_BACKUP);
                 }
             }
             catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_StartBattleTurn: {ex}"); }
@@ -1098,36 +959,7 @@ namespace SolastaAI
     }
 
     /// <summary>
-    /// <summary>
-    /// POSTFIX on StartBattleTurn: Spends the Move action for Ranged Fighters when enemies are
-    /// not in immediate melee range. This prevents the AI from pathfinding towards enemies.
-    /// The move action is preserved when an enemy is adjacent (≤2 cells) so the fighter can retreat.
-    /// </summary>
-    [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.StartBattleTurn))]
-    public static class Patch_StartBattleTurn_Post
-    {
-        public static void Postfix(GameLocationCharacter __instance)
-        {
-            try
-            {
-                if (__instance == null) return;
-                string name = __instance.Name ?? "";
-                if (!Main.CharacterAIChoices.TryGetValue(name, out int choice)) return;
-                if (__instance.ControllerId != PlayerControllerManager.DmControllerId) return;
 
-                if (choice == Main.MODE_FIGHTER && Main.ModSettings.FighterStyle == "Ranged")
-                {
-                    // Spend move action to prevent advancing, but preserve it when
-                    // melee-threatened (retreat) or on lower ground (seek elevation).
-                    Main.HandleRangedFighterPositioning(__instance);
-                }
-            }
-            catch (Exception ex)
-            {
-                Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_StartBattleTurn_Post: {ex}");
-            }
-        }
-    }
 
 
     /// <summary>
@@ -1154,8 +986,7 @@ namespace SolastaAI
                 string name = __instance.Name ?? "";
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice) && choice > 0)
                 {
-                    bool isRangedFighter = (choice == Main.MODE_FIGHTER && Main.ModSettings.FighterStyle == "Ranged");
-                    Main.CheckAndAutoSwapWeapons(__instance, isRangedFighter);
+                    Main.CheckAndAutoSwapWeapons(__instance, choice == Main.MODE_RANGE_BACKUP);
                 }
             }
             catch {}
