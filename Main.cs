@@ -160,94 +160,135 @@ namespace SolastaAI
         /// considering both the user toggle AND the current character's mode.
         /// Shillelagh Druid: ranged cantrips are blocked from AI selection (forces melee advance).
         /// </summary>
+        /// <summary>
+        /// Returns true if a spell should be allowed for the AI engine to use,
+        /// considering both the user toggle AND the current character's mode.
+        /// </summary>
         public static bool IsSpellEnabledForAI(string spellName)
         {
             if (string.IsNullOrEmpty(spellName)) return true;
 
-            // Check user-controlled spell toggles - disabled spells must ALWAYS be blocked for AI
             bool result = true;
+
+            // Shillelagh
             if (spellName.IndexOf("Shillelagh", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Zauberstock", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellShillelagh;
-            else if (spellName.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Guidance
+            else if (spellName.IndexOf("Guidance", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GöttlicheFührung", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Göttliche Führung", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellGuidance;
-            else if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Produce Flame
+            else if (spellName.IndexOf("ProduceFlame", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("FlammeErzeugen", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Flamme erzeugen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellProduceFlame;
-            else if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Thorn Whip
+            else if (spellName.IndexOf("ThornWhip", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Dornenpeitsche", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellThornWhip;
+            // Poison Spray
             else if (spellName.IndexOf("PoisonSpray", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Giftsprühen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellPoisonSpray;
-            else if (spellName.IndexOf("PoisonSting", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GiftigerStachel", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Poison Sting
+            else if (spellName.IndexOf("PoisonSting", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GiftigerStachel", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Giftiger Stachel", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellPoisonSting;
-            else if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Chill Touch
+            else if (spellName.IndexOf("ChillTouch", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("KalteHand", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Kalte Hand", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellChillTouch;
-            else if (spellName.IndexOf("ResistElements", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Resist Elements
+            else if (spellName.IndexOf("ResistElements", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("ElementenWiderstehen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellResistElements;
-            else if (spellName.IndexOf("AnimalFriendship", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Animal Friendship
+            else if (spellName.IndexOf("AnimalFriendship", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Tierfreundschaft", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellAnimalFriendship;
-            else if (spellName.IndexOf("CharmPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Charm Person
+            else if (spellName.IndexOf("CharmPerson", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("PersonBezaubern", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellCharmPerson;
-            else if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Cure Wounds
+            else if (spellName.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("WundenHeilen", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Wunden heilen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellCureWounds;
-            else if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Healing Word
+            else if (spellName.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("WortDerHeilung", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Wort der Heilung", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellHealingWord;
-            else if (spellName.IndexOf("DetectMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Detect Magic
+            else if (spellName.IndexOf("DetectMagic", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("MagieErkennen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellDetectMagic;
-            else if (spellName.IndexOf("DetectPoisonAndDisease", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Detect Poison and Disease
+            else if (spellName.IndexOf("DetectPoisonAndDisease", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GiftErkennen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellDetectPoisonAndDisease;
-            else if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Entangle
+            else if (spellName.IndexOf("Entangle", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Verstricken", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellEntangle;
-            else if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Faerie Fire
+            else if (spellName.IndexOf("FaerieFire", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Feenfeuer", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellFaerieFire;
-            else if (spellName.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Fog Cloud
+            else if (spellName.IndexOf("FogCloud", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Nebelwolke", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellFogCloud;
-            else if (spellName.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Goodberry
+            else if (spellName.IndexOf("Goodberry", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("GuteBeere", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellGoodberry;
-            else if (spellName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Jump
+            else if (spellName.IndexOf("Jump", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Springen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellJump;
-            else if (spellName.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Longstrider
+            else if (spellName.IndexOf("Longstrider", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("LangerSchritt", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellLongstrider;
-            else if (spellName.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Protection from Poison
+            else if (spellName.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SchutzVorGift", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Schutz vor Gift", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellProtectionFromPoison;
-            else if (spellName.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Barkskin
+            else if (spellName.IndexOf("Barkskin", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Rindenhaut", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellBarkskin;
-            else if (spellName.IndexOf("Darkvision", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Darkvision
+            else if (spellName.IndexOf("Darkvision", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Dunkelsicht", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellDarkvision;
-            else if (spellName.IndexOf("FlameBlade", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Flame Blade
+            else if (spellName.IndexOf("FlameBlade", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Flammenklinge", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellFlameBlade;
-            else if (spellName.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Flaming Sphere
+            else if (spellName.IndexOf("FlamingSphere", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Flammenkugel", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellFlamingSphere;
-            else if (spellName.IndexOf("HeatMetal", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Heat Metal
+            else if (spellName.IndexOf("HeatMetal", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("MetallErhitzen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellHeatMetal;
-            else if (spellName.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Hold Person
+            else if (spellName.IndexOf("HoldPerson", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("PersonFesthalten", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellHoldPerson;
-            else if (spellName.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Lesser Restoration
+            else if (spellName.IndexOf("LesserRestoration", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("TeilweiseGenesung", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellLesserRestoration;
-            else if (spellName.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Moonbeam
+            else if (spellName.IndexOf("Moonbeam", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Mondstrahl", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellMoonbeam;
-            else if (spellName.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Spike Growth
+            else if (spellName.IndexOf("SpikeGrowth", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Dornenwuchs", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellSpikeGrowth;
-            else if (spellName.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Pass Without Trace
+            else if (spellName.IndexOf("PassWithoutTrace", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SpurlosPassieren", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellPassWithoutTrace;
-            else if (spellName.IndexOf("ProtectionFromEnergy", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Protection from Energy
+            else if (spellName.IndexOf("ProtectionFromEnergy", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("SchutzVorEnergie", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellProtectionFromEnergy;
-            else if (spellName.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Call Lightning
+            else if (spellName.IndexOf("CallLightning", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("BlitzHerbeirufen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellCallLightning;
-            else if (spellName.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Dispel Magic
+            else if (spellName.IndexOf("DispelMagic", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("MagieBannen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellDispelMagic;
-            else if (spellName.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0)
+            // SleetStorm
+            else if (spellName.IndexOf("SleetStorm", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Schneeregensturm", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellSleetStorm;
-            else if (spellName.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0)
+            // WindWall
+            else if (spellName.IndexOf("WindWall", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Windwand", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellWindWall;
-            else if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Daylight
+            else if (spellName.IndexOf("Daylight", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Tageslicht", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellDaylight;
-            else if (spellName.IndexOf("CreateFoodAndWater", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Create Food and Water
+            else if (spellName.IndexOf("CreateFoodAndWater", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("NahrungErzeugen", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellCreateFoodAndWater;
-            else if (spellName.IndexOf("Revivify", StringComparison.OrdinalIgnoreCase) >= 0)
+            // Revivify
+            else if (spellName.IndexOf("Revivify", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Wiederbeleben", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellRevivify;
 
-            if (!result)
-                ModEntry?.Logger.Log($"[SolastaAI] IsSpellEnabledForAI -> FALSE for spell: {spellName}");
-
+            ModEntry?.Logger.Log($"[SolastaAI] IsSpellEnabledForAI -> {(result ? "ALLOWED" : "BLOCKED")} for spell: '{spellName}'");
             return result;
         }
 
@@ -258,24 +299,26 @@ namespace SolastaAI
         {
             if (string.IsNullOrEmpty(powerName)) return true;
 
+            bool result = true;
             if (powerName.IndexOf("WildShape", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Tiergestalt", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableDruidWildShape;
-            if (powerName.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterSecondWind;
-            if (powerName.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterActionSurge;
-            if (powerName.IndexOf("Indomitable", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Unbeugsam", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterIndomitable;
-            if (powerName.IndexOf("PushingAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterPushingAttack;
-            if (powerName.IndexOf("TripAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterTripAttack;
-            if (powerName.IndexOf("Riposte", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterRiposte;
-            if (powerName.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0)
-                return ModSettings.EnableFighterPrecisionAttack;
+                result = ModSettings.EnableDruidWildShape;
+            else if (powerName.IndexOf("SecondWind", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Durchschnaufen", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("CatchBreath", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterSecondWind;
+            else if (powerName.IndexOf("ActionSurge", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Tatendrank", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterActionSurge;
+            else if (powerName.IndexOf("Indomitable", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Unbeugsam", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterIndomitable;
+            else if (powerName.IndexOf("PushingAttack", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Stoßangriff", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterPushingAttack;
+            else if (powerName.IndexOf("TripAttack", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Beinstellen", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterTripAttack;
+            else if (powerName.IndexOf("Riposte", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterRiposte;
+            else if (powerName.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Präzisionsangriff", StringComparison.OrdinalIgnoreCase) >= 0)
+                result = ModSettings.EnableFighterPrecisionAttack;
 
-            return true;
+            ModEntry?.Logger.Log($"[SolastaAI] IsPowerEnabledForAI -> {(result ? "ALLOWED" : "BLOCKED")} for power: '{powerName}'");
+            return result;
         }
 
         private static void OnGUI(UnityModManager.ModEntry modEntry)
@@ -1109,10 +1152,15 @@ namespace SolastaAI
         {
             try
             {
-                if (spellDefinition != null && !Main.IsSpellEnabledForAI(spellDefinition.Name))
+                if (spellDefinition != null)
                 {
-                    __result = false;
-                    return false;
+                    string name = spellDefinition.Name;
+                    string title = spellDefinition.GuiPresentation?.Title ?? "";
+                    if (!Main.IsSpellEnabledForAI(name) || (!string.IsNullOrEmpty(title) && !Main.IsSpellEnabledForAI(title)))
+                    {
+                        __result = false;
+                        return false;
+                    }
                 }
             }
             catch {}
@@ -1130,10 +1178,15 @@ namespace SolastaAI
         {
             try
             {
-                if (spellDefinition != null && !Main.IsSpellEnabledForAI(spellDefinition.Name))
+                if (spellDefinition != null)
                 {
-                    __result = false;
-                    return false;
+                    string name = spellDefinition.Name;
+                    string title = spellDefinition.GuiPresentation?.Title ?? "";
+                    if (!Main.IsSpellEnabledForAI(name) || (!string.IsNullOrEmpty(title) && !Main.IsSpellEnabledForAI(title)))
+                    {
+                        __result = false;
+                        return false;
+                    }
                 }
             }
             catch {}
@@ -1151,10 +1204,15 @@ namespace SolastaAI
         {
             try
             {
-                if (spellDefinition != null && !Main.IsSpellEnabledForAI(spellDefinition.Name))
+                if (spellDefinition != null)
                 {
-                    __result = false;
-                    return false;
+                    string name = spellDefinition.Name;
+                    string title = spellDefinition.GuiPresentation?.Title ?? "";
+                    if (!Main.IsSpellEnabledForAI(name) || (!string.IsNullOrEmpty(title) && !Main.IsSpellEnabledForAI(title)))
+                    {
+                        __result = false;
+                        return false;
+                    }
                 }
             }
             catch {}
