@@ -567,9 +567,17 @@ namespace SolastaAI
             }
         }
 
+        private static float _explorationControlTimer = 0f;
+
         private static void OnUpdate(UnityModManager.ModEntry modEntry, float deltaTime)
         {
-            EnsureExplorationControl();
+            _explorationControlTimer += deltaTime;
+            if (_explorationControlTimer >= 0.5f)
+            {
+                _explorationControlTimer = 0f;
+                EnsureExplorationControl();
+            }
+
             if (!ModSettings.EnableHotkeyToggle) return;
             if (Input.GetKeyDown(ModSettings.ToggleHotkey)) ToggleActiveCharacterAI();
         }
