@@ -854,30 +854,30 @@ namespace SolastaAI
                     return;
                 }
 
-                // Melee Fighter logic: check distance to nearest enemy
-                // A normal character can walk ~6 cells in 1 movement action.
-                // If an enemy is within 1 turn reach (<= 6 cells), keep MELEE weapon active so fighter advances and attacks!
-                // Only switch to ranged weapon if nearest enemy is farther than 6 cells away.
-                int meleeRangeThreshold = 6;
+                // Melee Fighter logic:
+                // Melee fighters should keep their melee weapon set when closing in on enemies!
+                // Only swap to a ranged weapon if the nearest enemy is extremely far away (> 12 cells) AND the fighter hasn't started moving yet.
+                // If an enemy is anywhere within 12 cells, keep MELEE weapons in hand so the fighter runs up and strikes in melee (or swaps after arriving).
+                int rangedOnlyDistThreshold = 12;
 
-                if (minDist > meleeRangeThreshold && !currentlyRanged)
+                if (minDist > rangedOnlyDistThreshold && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy too far for melee ({minDist} cells > {meleeRangeThreshold}), switched to ranged weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy extremely far ({minDist} cells > {rangedOnlyDistThreshold}), switched to ranged weapon set.");
                     }
                     else
                     {
                         inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                     }
                 }
-                else if (minDist <= meleeRangeThreshold && currentlyRanged)
+                else if (minDist <= rangedOnlyDistThreshold && currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (!hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy in movement reach ({minDist} cells <= {meleeRangeThreshold}), switched back to MELEE weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy within combat reach ({minDist} cells <= {rangedOnlyDistThreshold}), switched back to MELEE weapon set.");
                     }
                     else
                     {
