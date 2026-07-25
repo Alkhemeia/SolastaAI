@@ -302,7 +302,7 @@ namespace SolastaAI
             else if (spellName.IndexOf("Revivify", StringComparison.OrdinalIgnoreCase) >= 0 || spellName.IndexOf("Wiederbeleben", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableSpellRevivify;
 
-            ModEntry?.Logger.Log($"[SolastaAI] IsSpellEnabledForAI -> {(result ? "ALLOWED" : "BLOCKED")} for spell: '{spellName}'");
+            if (!result) ModEntry?.Logger.Log($"[SolastaAI] IsSpellEnabledForAI -> BLOCKED for spell: '{spellName}'");
             return result;
         }
 
@@ -331,7 +331,7 @@ namespace SolastaAI
             else if (powerName.IndexOf("PrecisionAttack", StringComparison.OrdinalIgnoreCase) >= 0 || powerName.IndexOf("Präzisionsangriff", StringComparison.OrdinalIgnoreCase) >= 0)
                 result = ModSettings.EnableFighterPrecisionAttack;
 
-            ModEntry?.Logger.Log($"[SolastaAI] IsPowerEnabledForAI -> {(result ? "ALLOWED" : "BLOCKED")} for power: '{powerName}'");
+            if (!result) ModEntry?.Logger.Log($"[SolastaAI] IsPowerEnabledForAI -> BLOCKED for power: '{powerName}'");
             return result;
         }
 
