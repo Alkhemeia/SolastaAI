@@ -766,7 +766,7 @@ namespace SolastaAI
         {
             try
             {
-                if (!ModSettings.EnableSpellProtectionFromPoison) return;
+                if (!IsSpellEnabledForAI("ProtectionFromPoison")) return;
                 var hero = character?.RulesetCharacter as RulesetCharacterHero;
                 if (hero?.SpellRepertoires == null) return;
                 var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
@@ -779,7 +779,7 @@ namespace SolastaAI
                     {
                         if (rep == null) continue;
                         var spell = rep.PreparedSpells.Find(s => s != null && s.Name.IndexOf("ProtectionFromPoison", StringComparison.OrdinalIgnoreCase) >= 0);
-                        if (spell == null || !rep.CanCastSpell(spell, true)) continue;
+                        if (spell == null || !IsSpellEnabledForAI(spell.Name) || !rep.CanCastSpell(spell, true)) continue;
                         var impl = ServiceRepository.GetService<IRulesetImplementationService>();
                         if (impl == null) continue;
                         var effect = impl.InstantiateEffectSpell(hero, rep, spell, 2, false);
@@ -807,9 +807,9 @@ namespace SolastaAI
                     foreach (var rep in hero.SpellRepertoires)
                     {
                         if (rep == null) continue;
-                        var spell = rep.PreparedSpells.Find(s => s != null &&
-                            ((ModSettings.EnableSpellCureWounds && s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                             (ModSettings.EnableSpellHealingWord && s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0)));
+                        var spell = rep.PreparedSpells.Find(s => s != null && IsSpellEnabledForAI(s.Name) &&
+                            (s.Name.IndexOf("CureWounds", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             s.Name.IndexOf("HealingWord", StringComparison.OrdinalIgnoreCase) >= 0));
                         if (spell == null || !rep.CanCastSpell(spell, true)) continue;
                         var impl = ServiceRepository.GetService<IRulesetImplementationService>();
                         if (impl == null) continue;
@@ -1174,14 +1174,14 @@ namespace SolastaAI
     [HarmonyPatch(typeof(RulesetSpellRepertoire), nameof(RulesetSpellRepertoire.IsSpellReady))]
     public static class Patch_IsSpellReady
     {
-        public static bool Prefix(SpellDefinition spellDefinition, ref bool __result)
+        public static bool Prefix(SpellDefinition consideredSpellDefinition, ref bool __result)
         {
             try
             {
-                if (spellDefinition != null)
+                if (consideredSpellDefinition != null)
                 {
-                    string name = spellDefinition.Name;
-                    string title = spellDefinition.GuiPresentation?.Title ?? "";
+                    string name = consideredSpellDefinition.Name;
+                    string title = consideredSpellDefinition.GuiPresentation?.Title ?? "";
                     if (!Main.IsSpellEnabledForAI(name) || (!string.IsNullOrEmpty(title) && !Main.IsSpellEnabledForAI(title)))
                     {
                         __result = false;
