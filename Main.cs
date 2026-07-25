@@ -855,29 +855,28 @@ namespace SolastaAI
                 }
 
                 // Melee Fighter logic:
-                // Melee fighters should keep their melee weapon set when closing in on enemies!
-                // Only swap to a ranged weapon if the nearest enemy is extremely far away (> 12 cells) AND the fighter hasn't started moving yet.
-                // If an enemy is anywhere within 12 cells, keep MELEE weapons in hand so the fighter runs up and strikes in melee (or swaps after arriving).
-                int rangedOnlyDistThreshold = 12;
+                // If enemy is beyond 1-turn movement reach (> 6 cells), use ranged weapon set to attack from distance while closing in.
+                // If enemy is within movement reach (<= 6 cells), keep MELEE weapon set so fighter advances and strikes in melee!
+                int meleeMoveReachThreshold = 6;
 
-                if (minDist > rangedOnlyDistThreshold && !currentlyRanged)
+                if (minDist > meleeMoveReachThreshold && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy extremely far ({minDist} cells > {rangedOnlyDistThreshold}), switched to ranged weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy too far for melee ({minDist} cells > {meleeMoveReachThreshold}), switched to ranged weapon set to attack from distance.");
                     }
                     else
                     {
                         inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                     }
                 }
-                else if (minDist <= rangedOnlyDistThreshold && currentlyRanged)
+                else if (minDist <= meleeMoveReachThreshold && currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (!hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy within combat reach ({minDist} cells <= {rangedOnlyDistThreshold}), switched back to MELEE weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy within movement reach ({minDist} cells <= {meleeMoveReachThreshold}), switched back to MELEE weapon set.");
                     }
                     else
                     {
@@ -1142,7 +1141,7 @@ namespace SolastaAI
 
     /// <summary>
     /// POSTFIX on FinishMoveTo: Re-checks weapon configuration after character completes a movement step.
-    /// If a Melee Fighter moved adjacent to an enemy, automatically swaps back to the Melee weapon set BEFORE taking an attack action!
+    /// Also triggers AI decision engine refresh so the character immediately attacks with ranged/melee weapon!
     /// </summary>
     [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.FinishMoveTo))]
     public static class Patch_FinishMoveTo
