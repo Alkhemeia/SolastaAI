@@ -804,6 +804,15 @@ namespace SolastaAI
             catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAndCastProtectionFromPoison: {ex}"); }
         }
 
+        public static int GetPotionHealingPower(RulesetItem item)
+        {
+            string pName = item?.ItemDefinition?.Name ?? "";
+            if (pName.IndexOf("Supreme", StringComparison.OrdinalIgnoreCase) >= 0 || pName.IndexOf("Überragender", StringComparison.OrdinalIgnoreCase) >= 0) return 45;
+            if (pName.IndexOf("Superior", StringComparison.OrdinalIgnoreCase) >= 0 || pName.IndexOf("Mächtiger", StringComparison.OrdinalIgnoreCase) >= 0) return 28;
+            if (pName.IndexOf("Greater", StringComparison.OrdinalIgnoreCase) >= 0 || pName.IndexOf("Großer", StringComparison.OrdinalIgnoreCase) >= 0) return 14;
+            return 7; // Standard Potion of Healing
+        }
+
         public static void CheckAndUseHealingPotion(GameLocationCharacter character)
         {
             try
@@ -817,22 +826,24 @@ namespace SolastaAI
                 if (hero == null) return;
 
                 int currentHp = hero.CurrentHitPoints;
-                int maxHp = currentHp + hero.MissingHitPoints;
-                if (maxHp <= 0) return;
+                int missingHp = hero.MissingHitPoints;
+                int maxHp = currentHp + missingHp;
+                if (maxHp <= 0 || missingHp <= 0) return;
 
                 float hpPercent = (float)currentHp / maxHp * 100f;
-                // Only consume healing potions if character HP drops below 60%
-                if (hpPercent >= 60f) return;
+                // Only consume healing potions if character HP drops below 70%
+                if (hpPercent >= 70f) return;
 
                 var actionService = ServiceRepository.GetService<IGameLocationActionService>();
                 if (actionService == null) return;
 
-                // Search character inventory for healing potions (in quick slots or personal container)
-                RulesetItem potionItem = null;
+                // Collect all available healing potions from equipped slots & backpack
+                var availablePotions = new List<RulesetItem>();
+
                 var inventory = hero.CharacterInventory;
                 if (inventory != null)
                 {
-                    // 1. Check inventory slots (gadgets / utensil slots / equipped items)
+                    // 1. Check quick-use / gadget / utensil slots
                     if (inventory.InventorySlotsByName != null)
                     {
                         foreach (var kvp in inventory.InventorySlotsByName)
@@ -844,15 +855,14 @@ namespace SolastaAI
                                 if (iName.IndexOf("PotionOfHealing", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                     iName.IndexOf("Heiltrank", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
-                                    potionItem = slot.EquipedItem;
-                                    break;
+                                    availablePotions.Add(slot.EquipedItem);
                                 }
                             }
                         }
                     }
 
-                    // 2. Check personal container (backpack inventory)
-                    if (potionItem == null && inventory.PersonalContainer?.InventorySlots != null)
+                    // 2. Check backpack inventory container
+                    if (inventory.PersonalContainer?.InventorySlots != null)
                     {
                         foreach (var slot in inventory.PersonalContainer.InventorySlots)
                         {
@@ -862,25 +872,42 @@ namespace SolastaAI
                                 if (iName.IndexOf("PotionOfHealing", StringComparison.OrdinalIgnoreCase) >= 0 ||
                                     iName.IndexOf("Heiltrank", StringComparison.OrdinalIgnoreCase) >= 0)
                                 {
-                                    potionItem = slot.EquipedItem;
-                                    break;
+                                    availablePotions.Add(slot.EquipedItem);
                                 }
                             }
                         }
                     }
                 }
 
-                if (potionItem != null)
+                if (availablePotions.Count == 0) return;
+
+                // Pick potion that best covers missing HP without massive over-healing
+                RulesetItem bestPotion = null;
+                int bestDiff = int.MaxValue;
+
+                foreach (var potion in availablePotions)
+                {
+                    int healVal = GetPotionHealingPower(potion);
+                    // Compare difference between missing HP and potion healing power
+                    int diff = Math.Abs(missingHp - healVal);
+                    if (diff < bestDiff)
+                    {
+                        bestDiff = diff;
+                        bestPotion = potion;
+                    }
+                }
+
+                if (bestPotion != null)
                 {
                     var actionParams = new CharacterActionParams(character, ActionDefinitions.Id.UseItemBonus);
                     actionParams.TargetCharacters.Add(character);
-                    actionParams.TargetItem = potionItem;
+                    actionParams.TargetItem = bestPotion;
 
                     // Check if character has Bonus Action type available
                     if (character.GetActionStatus(ActionDefinitions.Id.UseItemBonus, ActionDefinitions.ActionScope.Battle, ActionDefinitions.ActionStatus.Available) == ActionDefinitions.ActionStatus.Available)
                     {
                         actionService.ExecuteAction(actionParams, null, false);
-                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {potionItem.ItemDefinition.Name} via Bonus Action (HP: {currentHp}/{maxHp})");
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {bestPotion.ItemDefinition.Name} via Bonus Action (Missing HP: {missingHp}/{maxHp})");
                         return;
                     }
 
@@ -889,7 +916,7 @@ namespace SolastaAI
                     if (character.GetActionStatus(ActionDefinitions.Id.UseItemMain, ActionDefinitions.ActionScope.Battle, ActionDefinitions.ActionStatus.Available) == ActionDefinitions.ActionStatus.Available)
                     {
                         actionService.ExecuteAction(actionParams, null, false);
-                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {potionItem.ItemDefinition.Name} via Main Action (HP: {currentHp}/{maxHp})");
+                        ModEntry?.Logger.Log($"[SolastaAI] {character.Name} used {bestPotion.ItemDefinition.Name} via Main Action (Missing HP: {missingHp}/{maxHp})");
                     }
                 }
             }
