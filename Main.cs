@@ -102,13 +102,15 @@ namespace SolastaAI
         public const int MODE_MELEE         = 1;
         public const int MODE_RANGE_BACKUP  = 2;
         public const int MODE_CASTER        = 3;
+        public const int MODE_FIGHTER       = 4;
 
         public static readonly string[] AIPackageNames = new string[]
         {
             "Human (Player)",
             "AI: Melee (Default)",
             "AI: Range (Default)",
-            "AI: Caster (Default)"
+            "AI: Caster (Default)",
+            "AI: Fighter"
         };
 
         public static bool Load(UnityModManager.ModEntry modEntry)
@@ -387,7 +389,50 @@ namespace SolastaAI
                         GUILayout.EndVertical();
                     }
 
-                    if (currentChoice > 0)
+                    if (currentChoice == MODE_FIGHTER)
+                    {
+                        GUILayout.BeginVertical("box");
+                        GUILayout.Label($"<i>✨ Fighter Combat Style & Skill Controls for {displayName}:</i>");
+
+                        GUILayout.Space(3);
+                        GUILayout.Label("  <b>⚔️ Combat Style / Kampfstil:</b>");
+                        GUILayout.BeginHorizontal();
+                        bool isMeleeStyle = ModSettings.FighterStyle != "Ranged";
+                        if (GUILayout.Toggle(isMeleeStyle, "  <b>⚔️ Melee (Nahkampf)</b>", GUILayout.Width(150)))
+                            ModSettings.FighterStyle = "Melee";
+                        if (GUILayout.Toggle(!isMeleeStyle, "  <b>🏹 Ranged (Fernkampf)</b>", GUILayout.Width(150)))
+                            ModSettings.FighterStyle = "Ranged";
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.Space(3);
+
+                        string fPrefix = $"{name}_fighter_";
+
+                        DrawCategoryHeader(fPrefix + "defense", "<b>🛡️ Defense & Recovery</b>", () =>
+                        {
+                            ModSettings.EnableFighterSecondWind = GUILayout.Toggle(ModSettings.EnableFighterSecondWind, "└─ <b>Second Wind / Durchschnaufen</b>");
+                            ModSettings.EnableFighterIndomitable = GUILayout.Toggle(ModSettings.EnableFighterIndomitable, "└─ <b>Indomitable / Unbeugsam</b>");
+                        });
+
+                        DrawCategoryHeader(fPrefix + "offensive", "<b>⚔️ Offensive Skills & Maneuvers</b>", () =>
+                        {
+                            ModSettings.EnableFighterActionSurge = GUILayout.Toggle(ModSettings.EnableFighterActionSurge, "└─ <b>Action Surge / Tatendrank</b>");
+                            ModSettings.EnableFighterPushingAttack = GUILayout.Toggle(ModSettings.EnableFighterPushingAttack, "└─ <b>Pushing Attack / Stoßangriff</b>");
+                            ModSettings.EnableFighterTripAttack = GUILayout.Toggle(ModSettings.EnableFighterTripAttack, "└─ <b>Trip Attack / Beinstellen</b>");
+                            ModSettings.EnableFighterRiposte = GUILayout.Toggle(ModSettings.EnableFighterRiposte, "└─ <b>Riposte</b>");
+                            ModSettings.EnableFighterPrecisionAttack = GUILayout.Toggle(ModSettings.EnableFighterPrecisionAttack, "└─ <b>Precision Attack / Präzisionsangriff</b>");
+                        });
+
+                        DrawCategoryHeader(fPrefix + "movement", "<b>🎯 Movement & Positioning</b>", () =>
+                        {
+                            if (ModSettings.FighterStyle == "Ranged")
+                                ModSettings.EnableAvoidOpportunityAttacks = GUILayout.Toggle(ModSettings.EnableAvoidOpportunityAttacks, "└─ <b>Avoid Opportunity Attacks</b>");
+                            ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "└─ <b>Auto-Weapon Swap</b>");
+                        });
+
+                        GUILayout.EndVertical();
+                    }
+                    else if (currentChoice > 0)
                     {
                         GUILayout.BeginVertical("box");
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
@@ -514,6 +559,11 @@ namespace SolastaAI
                             case MODE_MELEE:          pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                             case MODE_RANGE_BACKUP:   pkg = db.GetElement("DefaultRangeWithBackupMeleeDecisions", true); break;
                             case MODE_CASTER:         pkg = db.GetElement("DefaultSupportCasterWithBackupAttacksDecisions", true); break;
+                            case MODE_FIGHTER:
+                                pkg = (ModSettings.FighterStyle == "Ranged")
+                                    ? db.GetElement("DefaultRangeWithBackupMeleeDecisions", true)
+                                    : db.GetElement("DefaultMeleeWithBackupRangeDecisions", true);
+                                break;
                             default:                  pkg = db.GetElement("DefaultMeleeWithBackupRangeDecisions", true); break;
                         }
 
@@ -950,7 +1000,14 @@ namespace SolastaAI
                 if (choice > 0)
                 {
                     Main.ApplyAIController(__instance, choice);
-                    Main.CheckAndAutoSwapWeapons(__instance, choice == Main.MODE_RANGE_BACKUP);
+                    if (choice == Main.MODE_FIGHTER)
+                    {
+                        Main.ExecuteFighterTactics(__instance, Main.ModSettings.FighterStyle == "Ranged");
+                    }
+                    else
+                    {
+                        Main.CheckAndAutoSwapWeapons(__instance, choice == Main.MODE_RANGE_BACKUP);
+                    }
                 }
             }
             catch (Exception ex) { Main.ModEntry?.Logger.Error($"[SolastaAI] Patch_StartBattleTurn: {ex}"); }
@@ -986,7 +1043,8 @@ namespace SolastaAI
                 string name = __instance.Name ?? "";
                 if (Main.CharacterAIChoices.TryGetValue(name, out int choice) && choice > 0)
                 {
-                    Main.CheckAndAutoSwapWeapons(__instance, choice == Main.MODE_RANGE_BACKUP);
+                    bool isRanged = (choice == Main.MODE_RANGE_BACKUP) || (choice == Main.MODE_FIGHTER && Main.ModSettings.FighterStyle == "Ranged");
+                    Main.CheckAndAutoSwapWeapons(__instance, isRanged);
                 }
             }
             catch {}
