@@ -854,31 +854,29 @@ namespace SolastaAI
                     return;
                 }
 
-                // Melee Fighter logic: if no enemy is in immediate melee reach (<= 2 cells) and holding melee weapon,
-                // switch to ranged weapon set so the fighter can shoot while advancing!
-                int maxReachableDist = 2;
+                // Melee Fighter logic: check distance to nearest enemy
+                // If adjacent/reachable in melee (<= 2 cells), ensure melee weapon is active!
+                // If farther away (> 2 cells), use ranged weapon set to shoot while closing distance.
+                int meleeRangeThreshold = 2;
 
-                // If nearest enemy is farther than 6 cells (out of 1-turn melee reach) and we are currently holding melee weapon:
-                // Switch to ranged weapon so the fighter can shoot while advancing!
-                if (minDist > maxReachableDist && !currentlyRanged)
+                if (minDist > meleeRangeThreshold && !currentlyRanged)
                 {
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy too far for melee ({minDist} cells > {maxReachableDist}), switched to ranged weapon set to attack from distance.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy too far for melee ({minDist} cells > {meleeRangeThreshold}), switched to ranged weapon set.");
                     }
                     else
                     {
                         inventory.SwitchToWieldItemsOfConfiguration(currentConfig);
                     }
                 }
-                else if (minDist <= maxReachableDist && currentlyRanged)
+                else if (minDist <= meleeRangeThreshold && currentlyRanged)
                 {
-                    // Enemy is within melee reach (<= 6 cells): switch back to melee weapon set
                     inventory.SwitchToWieldItemsOfConfiguration(otherConfig);
                     if (!hero.IsWieldingRangedWeapon())
                     {
-                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy reachable in melee ({minDist} cells <= {maxReachableDist}), switched to melee weapon set.");
+                        ModEntry?.Logger.Log($"[SolastaAI] Melee Fighter '{character.Name}': Enemy in melee range ({minDist} cells <= {meleeRangeThreshold}), switched back to MELEE weapon set.");
                     }
                     else
                     {
@@ -1140,6 +1138,29 @@ namespace SolastaAI
     public static class Patch_EndBattleTurn
     {
         public static void Postfix() { Main.CurrentTurnCharacterName = ""; }
+    }
+
+    /// <summary>
+    /// POSTFIX on FinishMoveTo: Re-checks weapon configuration after character completes a movement step.
+    /// If a Melee Fighter moved adjacent to an enemy, automatically swaps back to the Melee weapon set BEFORE taking an attack action!
+    /// </summary>
+    [HarmonyPatch(typeof(GameLocationCharacter), nameof(GameLocationCharacter.FinishMoveTo))]
+    public static class Patch_FinishMoveTo
+    {
+        public static void Postfix(GameLocationCharacter __instance)
+        {
+            try
+            {
+                if (__instance == null || __instance.ControllerId != PlayerControllerManager.DmControllerId) return;
+                string name = __instance.Name ?? "";
+                if (Main.CharacterAIChoices.TryGetValue(name, out int choice) && choice > 0)
+                {
+                    bool isRangedFighter = (choice == Main.MODE_FIGHTER && Main.ModSettings.FighterStyle == "Ranged");
+                    Main.CheckAndAutoSwapWeapons(__instance, isRangedFighter);
+                }
+            }
+            catch {}
+        }
     }
 
     /// <summary>
