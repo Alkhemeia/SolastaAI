@@ -97,6 +97,20 @@ namespace SolastaAI
             return true;
         }
 
+        public static bool IsAIControlledTurn()
+        {
+            try
+            {
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService?.IsBattleInProgress == true && battleService.Battle?.ActiveContender != null)
+                {
+                    return battleService.Battle.ActiveContender.ControllerId == PlayerControllerManager.DmControllerId;
+                }
+            }
+            catch {}
+            return false;
+        }
+
         // Mode constants
         public const int MODE_HUMAN         = 0;
         public const int MODE_MELEE         = 1;
@@ -1061,7 +1075,7 @@ namespace SolastaAI
         {
             try
             {
-                if (spellDefinition != null)
+                if (Main.IsAIControlledTurn() && spellDefinition != null)
                 {
                     string name = spellDefinition.Name;
                     string title = spellDefinition.GuiPresentation?.Title ?? "";
@@ -1087,7 +1101,7 @@ namespace SolastaAI
         {
             try
             {
-                if (consideredSpellDefinition != null)
+                if (Main.IsAIControlledTurn() && consideredSpellDefinition != null)
                 {
                     string name = consideredSpellDefinition.Name;
                     string title = consideredSpellDefinition.GuiPresentation?.Title ?? "";
@@ -1113,7 +1127,7 @@ namespace SolastaAI
         {
             try
             {
-                if (spellDefinition != null)
+                if (Main.IsAIControlledTurn() && spellDefinition != null)
                 {
                     string name = spellDefinition.Name;
                     string title = spellDefinition.GuiPresentation?.Title ?? "";
@@ -1140,7 +1154,8 @@ namespace SolastaAI
             try
             {
                 if (actionParams == null || actionParams.ActingCharacter == null) return true;
-                if (actionParams.ActingCharacter.Side != RuleDefinitions.Side.Ally && actionParams.ActingCharacter.ControllerId != PlayerControllerManager.DmControllerId) return true;
+                // ONLY block actions when the acting character is currently controlled by AI (DmControllerId)!
+                if (actionParams.ActingCharacter.ControllerId != PlayerControllerManager.DmControllerId) return true;
 
                 // Check RulesetEffect (Spell or Power effect)
                 if (actionParams.RulesetEffect != null)
