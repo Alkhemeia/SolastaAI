@@ -365,13 +365,26 @@ namespace SolastaAI
             GUILayout.Label("<b>👥 Party Character AI Archetype Selection & Skill Settings</b>");
 
             var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-            if (charService != null && charService.PartyCharacters != null && charService.PartyCharacters.Count > 0)
+            if (charService != null)
             {
-                foreach (var character in charService.PartyCharacters)
+                var allControllableCharacters = new List<GameLocationCharacter>();
+                if (charService.PartyCharacters != null) allControllableCharacters.AddRange(charService.PartyCharacters);
+                if (charService.GuestCharacters != null)
                 {
-                    if (character == null) continue;
-                    string name = character.Name;
-                    if (string.IsNullOrEmpty(name)) continue;
+                    foreach (var guest in charService.GuestCharacters)
+                    {
+                        if (guest != null && !allControllableCharacters.Contains(guest))
+                            allControllableCharacters.Add(guest);
+                    }
+                }
+
+                if (allControllableCharacters.Count > 0)
+                {
+                    foreach (var character in allControllableCharacters)
+                    {
+                        if (character == null) continue;
+                        string name = character.Name;
+                        if (string.IsNullOrEmpty(name)) continue;
 
                     if (!CharacterAIChoices.TryGetValue(name, out int currentChoice)) currentChoice = 0;
 
@@ -524,7 +537,7 @@ namespace SolastaAI
 
                         GUILayout.EndVertical();
                     }
-                    else if (currentChoice > 0)
+                    if (currentChoice > 0)
                     {
                         GUILayout.BeginVertical("box");
                         ModSettings.EnableAutoWeaponSwap = GUILayout.Toggle(ModSettings.EnableAutoWeaponSwap, "   └─ <b>Auto-Weapon Swap</b>");
@@ -532,6 +545,7 @@ namespace SolastaAI
                     }
 
                     GUILayout.EndVertical();
+                    }
                 }
             }
             else
@@ -596,10 +610,15 @@ namespace SolastaAI
                 if (battleService == null || !battleService.IsBattleInProgress)
                 {
                     var charService = ServiceRepository.GetService<IGameLocationCharacterService>();
-                    if (charService?.PartyCharacters == null) return;
+                    if (charService == null) return;
                     int humanId = GetPlayerControllerId();
                     bool dirtied = false;
-                    foreach (var character in charService.PartyCharacters)
+
+                    var allChars = new List<GameLocationCharacter>();
+                    if (charService.PartyCharacters != null) allChars.AddRange(charService.PartyCharacters);
+                    if (charService.GuestCharacters != null) allChars.AddRange(charService.GuestCharacters);
+
+                    foreach (var character in allChars)
                     {
                         if (character != null && character.ControllerId == PlayerControllerManager.DmControllerId)
                         {
