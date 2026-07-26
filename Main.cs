@@ -84,6 +84,30 @@ namespace SolastaAI
         // Tracks the name of the character whose turn is currently being evaluated by the AI engine.
         // Updated in StartBattleTurn so mode-specific blocking is context-aware.
         public static string CurrentTurnCharacterName = "";
+        public static float CurrentTurnStartTime = 0f;
+
+        public static void CheckAITurnTimeout()
+        {
+            try
+            {
+                var battleService = ServiceRepository.GetService<IGameLocationBattleService>();
+                if (battleService?.IsBattleInProgress != true || battleService.Battle == null) return;
+
+                var activeContender = battleService.Battle.ActiveContender;
+                if (activeContender == null || activeContender.ControllerId != PlayerControllerManager.DmControllerId) return;
+
+                // Check if turn has been active for more than 120 seconds (2 minutes)
+                if (CurrentTurnStartTime > 0f && (Time.time - CurrentTurnStartTime) > 120f)
+                {
+                    ModEntry?.Logger.Log($"[SolastaAI] TIMEOUT: AI turn for '{activeContender.Name}' exceeded 2 minutes (120s). Force ending turn!");
+                    CurrentTurnStartTime = 0f;
+
+                    // Force turn completion
+                    activeContender.EndBattleTurn(battleService.Battle.CurrentRound);
+                }
+            }
+            catch (Exception ex) { ModEntry?.Logger.Error($"[SolastaAI] CheckAITurnTimeout: {ex}"); }
+        }
 
         public static Dictionary<string, int> CharacterAIChoices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         public static Dictionary<string, bool> CharacterGadgetItemChoices = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
@@ -590,6 +614,7 @@ namespace SolastaAI
             {
                 _explorationControlTimer = 0f;
                 EnsureExplorationControl();
+                CheckAITurnTimeout();
             }
 
             if (!ModSettings.EnableHotkeyToggle) return;
@@ -1218,6 +1243,7 @@ namespace SolastaAI
                 if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(rulesetName)) return true;
 
                 Main.CurrentTurnCharacterName = name;
+                Main.CurrentTurnStartTime = Time.time;
 
                 // Emergency low HP fallback
                 if (Main.ModSettings.EnableEmergencyLowHpFallback && __instance.RulesetCharacter != null)
@@ -1297,7 +1323,7 @@ namespace SolastaAI
     [HarmonyPatch(typeof(GameLocationCharacter), "EndBattleTurn")]
     public static class Patch_EndBattleTurn
     {
-        public static void Postfix() { Main.CurrentTurnCharacterName = ""; }
+        public static void Postfix() { Main.CurrentTurnCharacterName = ""; Main.CurrentTurnStartTime = 0f; }
     }
 
     /// <summary>
